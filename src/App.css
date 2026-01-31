@@ -1,0 +1,348 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
+
+:root {
+  --bg-color: #0f1014;
+  --card-bg: #18181b; /* Dark Matte */
+  --input-bg: #27272a;
+  --accent-color: #6366f1; /* Purple/Blue */
+  --accent-hover: #4f46e5;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- NEW: PLATINUM SHINE LOGO --- */
+.brand {
+  font-size: 1.8rem;
+  font-weight: 800; /* Extra Bold for metal look */
+  letter-spacing: -1px;
+  
+  /* Silver/Platinum Gradient */
+  background: linear-gradient(
+    to right,
+    #787878 0%,
+    #f2f2f2 10%, 
+    #b4b4b4 20%,
+    #ffffff 50%,
+    #b4b4b4 80%,
+    #f2f2f2 90%,
+    #787878 100%
+  );
+  
+  /* Animation Config */
+  background-size: 200% auto;
+  animation: shine 4s linear infinite;
+  
+  /* Mask text to show background */
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  /* Subtle Glow */
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.1));
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* --- LOBBY SCREEN --- */
+.lobby-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+/* --- LOBBY TITLE (PLATINUM SHINE) --- */
+.lobby-title {
+  font-size: 3rem; /* Thoda bada taaki center mein accha lage */
+  font-weight: 800;
+  margin-bottom: 15px;
+  letter-spacing: -1.5px;
+  text-align: center;
+
+  /* Same Platinum Gradient as Header */
+  background: linear-gradient(
+    to right,
+    #787878 0%,
+    #f2f2f2 10%, 
+    #b4b4b4 20%,
+    #ffffff 50%,
+    #b4b4b4 80%,
+    #f2f2f2 90%,
+    #787878 100%
+  );
+  
+  background-size: 200% auto;
+  animation: shine 4s linear infinite;
+  
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.15));
+}
+
+.tab-switcher {
+  display: flex;
+  background: var(--input-bg);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  margin-top: 24px;
+}
+
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.tab-btn.active { background: var(--card-bg); color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+.lobby-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid transparent;
+  padding: 16px;
+  border-radius: 12px;
+  color: white;
+  font-family: inherit;
+  font-size: 1.1rem;
+  outline: none;
+  margin-bottom: 16px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.lobby-input:focus { border-color: var(--accent-color); background: #000; }
+
+.full-btn {
+  width: 100%;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.1s, background 0.2s;
+}
+.full-btn:hover { background: var(--accent-hover); transform: translateY(-2px); }
+
+
+/* --- ACTIVE SCREEN --- */
+header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+/* .brand is defined at the top now */
+
+.room-badge {
+  background: var(--input-bg);
+  padding: 8px 16px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s;
+}
+.room-badge:hover { transform: translateY(-1px); border-color: var(--accent-color); }
+
+.lock-icon { font-size: 0.8rem; color: var(--text-secondary); }
+.room-name { font-size: 0.9rem; font-weight: 500; color: white; }
+
+.exit-icon { 
+  margin-left: auto; 
+  color: var(--text-secondary); 
+  cursor: pointer; 
+  font-size: 1.2rem;
+  transition: color 0.2s;
+}
+.exit-icon:hover { color: #ef4444; }
+
+
+/* --- INPUT CARD --- */
+.input-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+}
+
+.text-area {
+  background: transparent;
+  border: none;
+  color: white;
+  font-family: inherit;
+  font-size: 1.1rem;
+  resize: none;
+  outline: none;
+  flex-grow: 1;
+  margin-bottom: 20px;
+}
+.text-area::placeholder { color: #52525b; font-weight: 500; }
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 15px;
+}
+
+.attach-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.attach-btn:hover { color: white; }
+
+.post-btn {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.post-btn:hover { background: var(--accent-hover); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+.post-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+/* --- FEED --- */
+.feed { display: flex; flex-direction: column; gap: 16px; }
+
+.clip-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 20px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.clip-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); }
+
+.clip-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.timestamp {
+  font-size: 0.8rem;
+  color: #52525b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.actions { display: flex; gap: 15px; }
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+.icon-btn:hover { color: white; }
+.delete-btn:hover { color: #ef4444; }
+
+.clip-text {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  color: white;
+  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+.media-box {
+  margin-top: 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.media-box img, .media-box video { width: 100%; display: block; }
+
+.file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--input-bg);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--accent-color);
+  text-decoration: none;
+  margin-top: 10px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  color: #3f3f46;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+/* --- REMOVE NUMBER SPINNERS (ARROWS) --- */
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
