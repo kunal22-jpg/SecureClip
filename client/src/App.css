@@ -31,13 +31,11 @@ body {
   gap: 20px;
 }
 
-/* --- NEW: PLATINUM SHINE LOGO --- */
+/* --- PLATINUM SHINE LOGO --- */
 .brand {
   font-size: 1.8rem;
-  font-weight: 800; /* Extra Bold for metal look */
+  font-weight: 800;
   letter-spacing: -1px;
-  
-  /* Silver/Platinum Gradient */
   background: linear-gradient(
     to right,
     #787878 0%,
@@ -48,24 +46,16 @@ body {
     #f2f2f2 90%,
     #787878 100%
   );
-  
-  /* Animation Config */
   background-size: 200% auto;
   animation: shine 4s linear infinite;
-  
-  /* Mask text to show background */
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  
-  /* Subtle Glow */
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.1));
 }
 
 @keyframes shine {
-  to {
-    background-position: 200% center;
-  }
+  to { background-position: 200% center; }
 }
 
 /* --- LOBBY SCREEN --- */
@@ -78,15 +68,12 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
-/* --- LOBBY TITLE (PLATINUM SHINE) --- */
 .lobby-title {
-  font-size: 3rem; /* Thoda bada taaki center mein accha lage */
+  font-size: 3rem;
   font-weight: 800;
   margin-bottom: 15px;
   letter-spacing: -1.5px;
   text-align: center;
-
-  /* Same Platinum Gradient as Header */
   background: linear-gradient(
     to right,
     #787878 0%,
@@ -97,14 +84,11 @@ body {
     #f2f2f2 90%,
     #787878 100%
   );
-  
   background-size: 200% auto;
   animation: shine 4s linear infinite;
-  
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  
   filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.15));
 }
 
@@ -171,8 +155,6 @@ header {
   margin-bottom: 10px;
 }
 
-/* .brand is defined at the top now */
-
 .room-badge {
   background: var(--input-bg);
   padding: 8px 16px;
@@ -221,6 +203,23 @@ header {
   margin-bottom: 20px;
 }
 .text-area::placeholder { color: #52525b; font-weight: 500; }
+
+/* --- RENAME INPUT STYLE --- */
+.rename-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--text-secondary);
+  color: white;
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 2px 4px;
+  width: 200px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.rename-input:focus {
+  border-color: var(--accent-color);
+}
 
 .toolbar {
   display: flex;
@@ -306,25 +305,58 @@ header {
   font-weight: 500;
 }
 
+/* --- MEDIA BOX (VIDEO/IMAGES/FILES) --- */
 .media-box {
-  margin-top: 15px;
-  border-radius: 8px;
+  margin-top: 12px;
+  background: var(--input-bg);
+  border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--border-color);
-}
-.media-box img, .media-box video { width: 100%; display: block; }
-
-.file-pill {
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  background: var(--input-bg);
-  padding: 8px 12px;
+  padding: 10px;
+}
+
+.media-box img, .media-box video {
+  width: 100%;
+  display: block;
   border-radius: 8px;
-  font-size: 0.9rem;
-  color: var(--accent-color);
+}
+
+/* --- 🔥 NEW AUDIO PLAYER STYLING 🔥 --- */
+/* This makes the audio player look modern, dark, and integrated */
+audio {
+  width: 100%;
+  height: 36px;
+  outline: none;
+  /* Magic Filter: Inverts white player to dark grey/black */
+  filter: invert(0.9) hue-rotate(180deg);
+  opacity: 0.85;
+}
+
+/* Download Button Style */
+.file-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(99, 102, 241, 0.1); /* Halka Purple Tint */
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: var(--accent-color); /* Purple Text */
   text-decoration: none;
-  margin-top: 10px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.file-pill:hover {
+  background: var(--accent-color);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .footer {
@@ -334,15 +366,326 @@ header {
   font-size: 0.8rem;
   font-weight: 500;
 }
+
+/* --- MODAL STYLES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Dark Dim Background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px); /* Mast Blur Effect */
+}
+
+.modal-content {
+  background: var(--card-bg);
+  padding: 25px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  animation: popIn 0.2s ease;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* --- DROPDOWN MENU --- */
+.action-menu-container {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #27272a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-item {
+  background: transparent;
+  border: none;
+  color: #e4e4e7;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+.menu-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: white;
+}
+
+.menu-item.delete {
+  color: #ef4444;
+}
+.menu-item.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* --- IMAGE PREVIEW MODAL --- */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.preview-image {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 8px;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+.close-preview {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  background: rgba(0,0,0,0.5);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* --- REMOVE NUMBER SPINNERS (ARROWS) --- */
-/* Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-/* Firefox */
 input[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield; /* Fixed the yellow warning here */
+}
+
+/* --- 📱 MOBILE RESPONSIVENESS (UPDATED) --- */
+
+@media screen and (max-width: 768px) {
+  
+  /* 1. Body Padding Kam Karo */
+  body {
+    padding: 10px; /* PC pe 40px tha, Mobile pe 10px */
+  }
+
+  /* 2. Container Full Width */
+  .container {
+    max-width: 100%; /* Mobile pe poori width use karega */
+  }
+
+  /* 3. Lobby Card Adjustments */
+  .lobby-card {
+    padding: 25px 20px; /* Padding thodi kam */
+  }
+  .lobby-title {
+    font-size: 2.2rem; /* Title font chota kiya (3rem se 2.2rem) */
+  }
+  .lobby-input {
+    font-size: 1rem;
+    padding: 14px;
+  }
+
+  /* 4. Active Room Header */
+  header {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .brand {
+    font-size: 1.4rem; /* Brand logo thoda chota */
+  }
+  .room-badge {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+  .room-name {
+    font-size: 0.8rem;
+    max-width: 120px; /* Lambe naam ko control karne ke liye */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 5. Input Card (Post Area) */
+  .input-card {
+    padding: 15px;
+    min-height: 150px;
+  }
+  .text-area {
+    font-size: 1rem; /* Font size readable rakho */
+  }
+  
+  /* Rename Input mobile pe full width ho jaye */
+  .rename-input {
+    width: 100%; 
+    font-size: 0.9rem;
+  }
+
+  /* Toolbar Items Stack na ho, but space manage karein */
+  .toolbar {
+    padding-top: 12px;
+  }
+  .attach-btn {
+    font-size: 0.85rem;
+  }
+  .post-btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+
+  /* 6. Feed Cards */
+  .clip-card {
+    padding: 15px;
+  }
+  .clip-meta {
+    flex-direction: column; /* Time aur Buttons upar niche aa jayein agar jagah kam ho */
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .actions {
+    width: 100%;
+    justify-content: flex-end; /* Buttons right side mein rahenge */
+    gap: 12px;
+  }
+  .icon-btn {
+    font-size: 1.2rem; /* Icons thode bade taaki ungli se tap karna aasaan ho */
+    padding: 5px; /* Touch area badhane ke liye */
+  }
+
+  /* 🔥 FIX AUDIO PLAYER ON MOBILE */
+  /* This forces the container holding (Icon + Audio) to stack vertically */
+  .media-box > div {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 10px !important;
+      padding: 15px !important;
+  }
+
+  /* This forces the audio element to be tall enough for controls */
+  .media-box audio {
+      height: 54px !important;
+      width: 100% !important;
+      margin-top: 5px;
+  }
+
+  /* 7. Modals (Popups) */
+  .modal-content {
+    width: 95%; /* Screen ke kinare tak na chipke */
+    padding: 20px;
+  }
+  .preview-image {
+    max-width: 100%;
+    border-radius: 4px;
+  }
+  .close-preview {
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+  }
+}
+/* --- 🚀 3D BOOT LOADER ANIMATION --- */
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 16, 20, 0.95); /* Dark background */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+}
+
+.spinner-box {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+  perspective: 800px; /* Gives the 3D depth */
+}
+
+.cube-wrapper {
+  width: 50px;
+  height: 50px;
+  transform-style: preserve-3d;
+  animation: spin 3s infinite linear;
+}
+
+.face {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 2px solid #6366f1;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+}
+
+/* 3D Transform Logic */
+.face1 { transform: translateZ(25px); }
+.face2 { transform: rotateY(90deg) translateZ(25px); }
+.face3 { transform: rotateY(180deg) translateZ(25px); }
+.face4 { transform: rotateY(-90deg) translateZ(25px); }
+.face5 { transform: rotateX(90deg) translateZ(25px); }
+.face6 { transform: rotateX(-90deg) translateZ(25px); }
+
+@keyframes spin {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+.boot-text {
+  margin-top: 40px;
+  font-family: 'Courier New', Courier, monospace;
+  color: #6366f1;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
