@@ -31,6 +31,18 @@ function App() {
   // Image Preview State
   const [previewImage, setPreviewImage] = useState(null);
 
+  // 🔥 KEEP ALIVE: Pings Render every 5 minutes to prevent 15-min timeout
+  useEffect(() => {
+    const keepAlive = setInterval(() => {
+      console.log("💓 Sending Heartbeat to Render...");
+      // We send a dummy request to reset the timer
+      api.post('/room-check', { room: 'keep-alive' })
+         .catch(err => console.log("Heartbeat silent fail")); 
+    }, 5 * 60 * 1000); // 5 Minutes
+
+    return () => clearInterval(keepAlive);
+  }, []);
+
   // Refs
   const inputRef = useRef(null);       
   const renameInputRef = useRef(null);
