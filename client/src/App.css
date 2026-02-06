@@ -770,3 +770,60 @@ input[type=number] {
 .delete-all-icon-btn:hover svg {
   color: #ef4444;
 }
+.delete-all-icon-btn {
+  background: #27272a;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-all-icon-btn svg {
+  color: #71717a;
+  font-size: 1rem;
+  transition: color 0.2s ease;
+}
+
+.delete-all-icon-btn:hover {
+  background: #27272a;
+}
+
+.delete-all-icon-btn:hover svg {
+  color: #ef4444;
+}
+
+/* Secret Modal Animations */
+.secret-modal {
+  animation: secretReveal 0.5s ease-out;
+}
+
+@keyframes secretReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.secret-modal h3 {
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(20deg);
+  }
+}
