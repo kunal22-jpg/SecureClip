@@ -9,6 +9,7 @@ function App() {
   const [displayName, setDisplayName] = useState(() => sessionStorage.getItem('secureclip_name') || '');
   const [clips, setClips] = useState([]);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showSecretModal, setShowSecretModal] = useState(false);
   
   const [myUserId] = useState(() => {
       let id = sessionStorage.getItem('secureclip_uid');
@@ -58,6 +59,10 @@ function App() {
   const modalInputRef = useRef(null); 
   const abortControllerRef = useRef(null);
 
+  // SECRET CODE DETECTION
+  const SECRET_CODE = "Fuck me"; // Change this to your secret code
+  const SECRET_MESSAGE = "🎉 Congratulations!Ap chud gaye.";
+
   const { getRootProps, getInputProps, open } = useDropzone({
     onDrop: files => {
       const droppedFile = files[0];
@@ -80,6 +85,14 @@ function App() {
         }
     }
   };
+
+  // Check for secret code when text changes
+  useEffect(() => {
+    if (text.trim().toLowerCase() === SECRET_CODE.toLowerCase()) {
+      setShowSecretModal(true);
+      setText(''); // Clear the text after triggering
+    }
+  }, [text]);
 
   useEffect(() => {
       if (activeGameId && (gameState.winner || gameState.isDraw)) {
@@ -134,6 +147,7 @@ function App() {
   const handleGlobalKeys = (e) => {
     if (e.key === 'Escape') {
         e.preventDefault();
+        if (showSecretModal) { setShowSecretModal(false); return; }
         if (showClearModal) { setShowClearModal(false); return; }
         if (showGameModal) { setShowGameModal(false); setActiveGameId(null); return; }
         if (previewImage) { setPreviewImage(null); return; }
@@ -383,6 +397,24 @@ function App() {
         </div>
       )}
 
+      {/* SECRET MESSAGE MODAL */}
+      {showSecretModal && (
+        <div className="modal-overlay" onClick={() => setShowSecretModal(false)}>
+          <div className="modal-content secret-modal" onClick={(e) => e.stopPropagation()} style={{textAlign:'center', maxWidth:'500px'}}>
+            <div style={{fontSize:'4rem', marginBottom:'20px'}}>🔓</div>
+            <h3 style={{color:'#a855f7', marginBottom:'15px', fontSize:'1.8rem', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+              Secret Unlocked!
+            </h3>
+            <p style={{color:'#d1d5db', marginBottom:'25px', lineHeight:'1.8', fontSize:'1.1rem'}}>
+              {SECRET_MESSAGE}
+            </p>
+            <button className="full-btn" onClick={() => setShowSecretModal(false)} style={{background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)'}}>
+              Awesome! ✨
+            </button>
+          </div>
+        </div>
+      )}
+
       {showClearModal && (
         <div className="modal-overlay" onClick={() => setShowClearModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{textAlign:'center', maxWidth:'400px'}}>
@@ -525,7 +557,7 @@ function App() {
 
             <div {...getRootProps()} className="input-card" style={{ position: 'relative', outline: 'none' }}>
                 <input {...getInputProps()} />
-                <textarea ref={inputRef} className="text-area" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What's on your clipboard?" autoFocus />
+                <textarea ref={inputRef} className="text-area" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What's on your clipboard? (Paste images directly!)" autoFocus />
                 {file && (
                 <div style={{ marginBottom:'15px', display:'flex', alignItems:'center', gap:'10px', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
                     <span style={{fontSize:'1.2rem'}}>📎</span>
