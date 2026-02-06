@@ -496,131 +496,6 @@ input[type=number] {
   appearance: textfield; /* Fixed the yellow warning here */
 }
 
-/* --- 📱 MOBILE RESPONSIVENESS (UPDATED) --- */
-
-@media screen and (max-width: 768px) {
-  
-  /* 1. Body Padding Kam Karo */
-  body {
-    padding: 10px; /* PC pe 40px tha, Mobile pe 10px */
-  }
-
-  /* 2. Container Full Width */
-  .container {
-    max-width: 100%; /* Mobile pe poori width use karega */
-  }
-
-  /* 3. Lobby Card Adjustments */
-  .lobby-card {
-    padding: 25px 20px; /* Padding thodi kam */
-  }
-  .lobby-title {
-    font-size: 2.2rem; /* Title font chota kiya (3rem se 2.2rem) */
-  }
-  .lobby-input {
-    font-size: 1rem;
-    padding: 14px;
-  }
-
-  /* 4. Active Room Header */
-  header {
-    flex-direction: row;
-    justify-content: space-between;
-  }
-  .brand {
-    font-size: 1.4rem; /* Brand logo thoda chota */
-  }
-  .room-badge {
-    padding: 6px 12px;
-    font-size: 0.85rem;
-  }
-  .room-name {
-    font-size: 0.8rem;
-    max-width: 120px; /* Lambe naam ko control karne ke liye */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* 5. Input Card (Post Area) */
-  .input-card {
-    padding: 15px;
-    min-height: 150px;
-  }
-  .text-area {
-    font-size: 1rem; /* Font size readable rakho */
-  }
-  
-  /* Rename Input mobile pe full width ho jaye */
-  .rename-input {
-    width: 100%; 
-    font-size: 0.9rem;
-  }
-
-  /* Toolbar Items Stack na ho, but space manage karein */
-  .toolbar {
-    padding-top: 12px;
-  }
-  .attach-btn {
-    font-size: 0.85rem;
-  }
-  .post-btn {
-    padding: 10px 18px;
-    font-size: 0.9rem;
-  }
-
-  /* 6. Feed Cards */
-  .clip-card {
-    padding: 15px;
-  }
-  .clip-meta {
-    flex-direction: column; /* Time aur Buttons upar niche aa jayein agar jagah kam ho */
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .actions {
-    width: 100%;
-    justify-content: flex-end; /* Buttons right side mein rahenge */
-    gap: 12px;
-  }
-  .icon-btn {
-    font-size: 1.2rem; /* Icons thode bade taaki ungli se tap karna aasaan ho */
-    padding: 5px; /* Touch area badhane ke liye */
-  }
-
-  /* 🔥 FIX AUDIO PLAYER ON MOBILE */
-  /* This forces the container holding (Icon + Audio) to stack vertically */
-  .media-box > div {
-      flex-direction: column !important;
-      align-items: stretch !important;
-      gap: 10px !important;
-      padding: 15px !important;
-  }
-
-  /* This forces the audio element to be tall enough for controls */
-  .media-box audio {
-      height: 54px !important;
-      width: 100% !important;
-      margin-top: 5px;
-  }
-
-  /* 7. Modals (Popups) */
-  .modal-content {
-    width: 95%; /* Screen ke kinare tak na chipke */
-    padding: 20px;
-  }
-  .preview-image {
-    max-width: 100%;
-    border-radius: 4px;
-  }
-  .close-preview {
-    top: 20px;
-    right: 20px;
-    width: 40px;
-    height: 40px;
-    font-size: 1.5rem;
-  }
-}
 /* --- 🚀 3D BOOT LOADER ANIMATION --- */
 .loader-overlay {
   position: fixed;
@@ -688,4 +563,210 @@ input[type=number] {
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* ----------------------------------------------------- */
+/* 🔥🔥🔥 NEW TIC-TAC-TOE STYLES (GOOGLE DOODLE VIBE) 🔥🔥🔥 */
+/* ----------------------------------------------------- */
+
+/* Game Lobby Scrollbar (Thin & Sleek) */
+.game-lobby div::-webkit-scrollbar {
+  width: 6px;
+}
+.game-lobby div::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+.game-lobby div::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 10px;
+}
+.game-lobby div::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Animated Board Cells */
+.tic-tac-grid > div {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s;
+}
+
+.tic-tac-grid > div:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Winner Strike-Through Line (Responsive Classes) */
+.strike-line {
+  position: absolute;
+  background-color: #facc15; /* Gold Color */
+  border-radius: 5px;
+  z-index: 10;
+  transform-origin: center;
+  animation: drawLine 0.3s ease-out forwards;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
+  height: 6px; /* Desktop Thickness */
+}
+
+/* Position Classes */
+.strike-row-1 { top: 16.6%; left: 2%; width: 96%; }
+.strike-row-2 { top: 50%; left: 2%; width: 96%; transform: translateY(-50%); }
+.strike-row-3 { bottom: 16.6%; left: 2%; width: 96%; }
+
+.strike-col-1 { left: 16.6%; top: 2%; height: 96%; width: 6px; }
+.strike-col-2 { left: 50%; top: 2%; height: 96%; width: 6px; transform: translateX(-50%); }
+.strike-col-3 { right: 16.6%; top: 2%; height: 96%; width: 6px; }
+
+.strike-diag-1 { top: 50%; left: 50%; width: 100%; transform: translate(-50%, -50%) rotate(45deg); }
+.strike-diag-2 { top: 50%; left: 50%; width: 100%; transform: translate(-50%, -50%) rotate(-45deg); }
+
+@keyframes drawLine {
+  from { width: 0; opacity: 0; }
+  to { width: 96%; opacity: 1; } /* Grows to full width */
+}
+
+/* Player Indicator in Lobby */
+.player-dot {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  box-shadow: 0 0 5px #4ade80;
+}
+
+/* --- 📱 MOBILE RESPONSIVENESS (UPDATED) --- */
+
+@media screen and (max-width: 768px) {
+  /* 1. Body Padding Kam Karo */
+  body { padding: 10px; }
+
+  /* 2. Container Full Width */
+  .container { max-width: 100%; }
+
+  /* 3. Lobby Card Adjustments */
+  .lobby-card { padding: 25px 20px; }
+  .lobby-title { font-size: 2.2rem; }
+  .lobby-input { font-size: 1rem; padding: 14px; }
+
+  /* 4. Active Room Header (Fix Wrap Issue) */
+  header {
+    flex-wrap: wrap; /* Allow wrapping */
+    justify-content: center; /* Center items when wrapped */
+    gap: 8px; /* Tighter gap */
+  }
+  .brand {
+    font-size: 1.4rem;
+    width: 100%; /* Force brand to take full top row */
+    text-align: center;
+    margin-bottom: 5px;
+  }
+  .room-badge {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    flex-grow: 1; /* Make badges grow to fill space */
+    justify-content: center;
+  }
+  .room-name {
+    font-size: 0.8rem;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 5. Input Card (Post Area) */
+  .input-card { padding: 15px; min-height: 150px; }
+  .text-area { font-size: 1rem; }
+  .rename-input { width: 100%; font-size: 0.9rem; }
+  .toolbar { padding-top: 12px; }
+  .attach-btn { font-size: 0.85rem; }
+  .post-btn { padding: 10px 18px; font-size: 0.9rem; }
+
+  /* 6. Feed Cards */
+  .clip-card { padding: 15px; }
+  .clip-meta { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .actions { width: 100%; justify-content: flex-end; gap: 12px; }
+  .icon-btn { font-size: 1.2rem; padding: 5px; }
+
+  /* 🔥 FIX AUDIO PLAYER ON MOBILE */
+  .media-box > div { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; padding: 15px !important; }
+  .media-box audio { height: 54px !important; width: 100% !important; margin-top: 5px; }
+
+  /* 7. Modals (Popups) */
+  .modal-content { width: 95%; padding: 20px; }
+  .preview-image { max-width: 100%; border-radius: 4px; }
+  .close-preview { top: 20px; right: 20px; width: 40px; height: 40px; font-size: 1.5rem; }
+
+  /* 🔥🔥🔥 GAME MODAL MOBILE FIXES (FIXES OVERFLOW) 🔥🔥🔥 */
+  .modal-content[style*="minWidth:320px"] {
+      min-width: unset !important; /* Override inline styles */
+      width: 90% !important;
+  }
+
+  .game-lobby .full-btn { padding: 12px; font-size: 0.95rem; }
+  
+  .tic-tac-grid {
+      gap: 6px !important;
+      padding: 5px !important;
+  }
+
+  .tic-tac-grid > div {
+      height: 70px !important; /* Smaller cells */
+      font-size: 2.2rem !important;
+      border-radius: 6px !important;
+  }
+
+  /* 🔥 THINNER STRIKE LINE FOR MOBILE */
+  .strike-line {
+      height: 4px !important;
+      box-shadow: 0 0 5px rgba(250, 204, 21, 0.6);
+  }
+  
+  /* Adjust vertical lines to be thinner too */
+  .strike-col-1, .strike-col-2, .strike-col-3 {
+      width: 4px !important;
+  }
+}
+.delete-all-btn {
+  padding: 10px 20px;
+  background: #3f3f46;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.delete-all-btn:hover {
+  background: #ef4444;
+  transform: translateY(-1px);
+}
+.delete-all-icon-btn {
+  background: #27272a;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-all-icon-btn svg {
+  color: #71717a;
+  font-size: 1rem;
+  transition: color 0.2s ease;
+}
+
+.delete-all-icon-btn:hover {
+  background: #27272a;
+}
+
+.delete-all-icon-btn:hover svg {
+  color: #ef4444;
 }
