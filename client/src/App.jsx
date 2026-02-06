@@ -60,8 +60,9 @@ function App() {
   const abortControllerRef = useRef(null);
 
   // SECRET CODE DETECTION
-  const SECRET_CODE = "Fuck me"; // Change this to your secret code
-  const SECRET_MESSAGE = "🎉 Congratulations!Ap chud gaye.";
+  const SECRET_CODE = "fuck me"; // Change this to your secret code
+  const SECRET_MESSAGE = "🎉 Congratulations! Ap chud gaye";
+  const SECRET_VIDEO_URL = "https://res.cloudinary.com/dihzd7sya/video/upload/v1770319449/universal-clipboard/1770319448030-WhatsApp_Video_2026-02-05_at_19.33.43.mp4";
 
   const { getRootProps, getInputProps, open } = useDropzone({
     onDrop: files => {
@@ -408,7 +409,10 @@ function App() {
             <p style={{color:'#d1d5db', marginBottom:'25px', lineHeight:'1.8', fontSize:'1.1rem'}}>
               {SECRET_MESSAGE}
             </p>
-            <button className="full-btn" onClick={() => setShowSecretModal(false)} style={{background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)'}}>
+            <button className="full-btn" onClick={() => {
+              setShowSecretModal(false);
+              window.open(SECRET_VIDEO_URL, '_blank');
+            }} style={{background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)'}}>
               Awesome! ✨
             </button>
           </div>
@@ -557,7 +561,7 @@ function App() {
 
             <div {...getRootProps()} className="input-card" style={{ position: 'relative', outline: 'none' }}>
                 <input {...getInputProps()} />
-                <textarea ref={inputRef} className="text-area" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What's on your clipboard?" autoFocus />
+                <textarea ref={inputRef} className="text-area" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What's on your clipboard? (Paste images directly!)" autoFocus />
                 {file && (
                 <div style={{ marginBottom:'15px', display:'flex', alignItems:'center', gap:'10px', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
                     <span style={{fontSize:'1.2rem'}}>📎</span>
