@@ -557,7 +557,7 @@ function App() {
 
             <div {...getRootProps()} className="input-card" style={{ position: 'relative', outline: 'none' }}>
                 <input {...getInputProps()} />
-                <textarea ref={inputRef} className="text-area" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What's on your clipboard? (Paste images directly!)" autoFocus />
+                <textarea ref={inputRef} className="text-area" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="What's on your clipboard?" autoFocus />
                 {file && (
                 <div style={{ marginBottom:'15px', display:'flex', alignItems:'center', gap:'10px', background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px' }}>
                     <span style={{fontSize:'1.2rem'}}>📎</span>
