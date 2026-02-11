@@ -125,13 +125,14 @@ function App() {
                     const res = await api.get(`/rps/${activeRpsId}?userId=${myUserId}`);
                     const newServerState = res.data;
                     
+                    // 🔥 EXACT 1400ms DELAY (matches 0.7s CSS animation perfectly x2)
                     if (newServerState.status === 'revealing' && rpsGameState.status !== 'revealing' && !rpsAnimating) {
                         setRpsAnimating(true);
                         setRpsGameState(newServerState);
                         setTimeout(() => {
                             setRpsAnimating(false);
                             setDisplayedRpsState(newServerState);
-                        }, 1500); 
+                        }, 1400); 
                     } else if (!rpsAnimating) {
                         setRpsGameState(newServerState);
                         setDisplayedRpsState(newServerState);
@@ -251,6 +252,8 @@ function App() {
           setActiveRpsId(gameId);
       } catch (err) { alert(err.response?.data?.error || "Game full or unavailable"); }
   };
+
+  // 🔥 Make RPS Move triggers immediate 1400ms animation if it's the finishing move
   const makeRpsMove = async (choice) => {
       if (rpsGameState.status === 'finished' || rpsGameState.status === 'revealing') return;
       const me = rpsGameState.players.find(p => p.id === myUserId);
@@ -260,14 +263,29 @@ function App() {
       setRpsGameState(prev => ({ ...prev, players: newPlayersState }));
       setDisplayedRpsState(prev => ({ ...prev, players: newPlayersState }));
       
-      await api.post(`/rps/${activeRpsId}/move`, { choice, userId: myUserId });
+      try {
+          const res = await api.post(`/rps/${activeRpsId}/move`, { choice, userId: myUserId });
+          const newServerState = res.data;
+          if (newServerState.status === 'revealing' && !rpsAnimating) {
+              setRpsAnimating(true);
+              setRpsGameState(newServerState);
+              setTimeout(() => {
+                  setRpsAnimating(false);
+                  setDisplayedRpsState(newServerState);
+              }, 1400); 
+          }
+      } catch(e){}
   };
+
+  // 🔥 NEXT ROUND: Wait for opponent
   const nextRpsRound = async () => {
-      const resetState = { ...rpsGameState, status: 'ready', result: null, players: rpsGameState.players.map(p => ({...p, choice: null})) };
-      setRpsGameState(resetState);
-      setDisplayedRpsState(resetState);
-      await api.post(`/rps/${activeRpsId}/next`);
+      // Optimistically show waiting state in UI
+      const newPlayers = displayedRpsState.players.map(p => p.id === myUserId ? { ...p, wantsNext: true } : p);
+      setDisplayedRpsState(prev => ({ ...prev, players: newPlayers }));
+      // Tell server we are ready
+      await api.post(`/rps/${activeRpsId}/next`, { userId: myUserId });
   };
+
   const leaveRpsGame = async () => {
       isLeavingRef.current = true;
       try { await api.delete(`/rps/${activeRpsId}/leave`); } catch(e){}
@@ -276,48 +294,32 @@ function App() {
       setTimeout(() => { isLeavingRef.current = false; }, 1000);
   };
 
-  // 🔥 UPDATED: CREATE ROOM (Wait for API + minimum 2.5s for pencil animation)
   const handleCreate = async () => {
     if (!inputName.trim()) return alert("Enter a room name!");
     setIsLoading(true);
     try {
         const code = Math.floor(10000 + Math.random() * 90000).toString();
-        // Promise.all ensures the pencil loader runs for AT LEAST 2500ms
         await Promise.all([
             api.post('/room-check', { room: code, name: inputName }),
             new Promise(resolve => setTimeout(resolve, 2500))
         ]);
-        sessionStorage.setItem('secureclip_room', code); 
-        sessionStorage.setItem('secureclip_name', inputName);
-        setRoom(code); 
-        setDisplayName(inputName);
-    } catch (error) { 
-        alert("Connecting to server..."); 
-    } finally { 
-        setIsLoading(false); 
-    }
+        sessionStorage.setItem('secureclip_room', code); sessionStorage.setItem('secureclip_name', inputName);
+        setRoom(code); setDisplayName(inputName);
+    } catch (error) { alert("Connecting to server..."); } finally { setIsLoading(false); }
   };
 
-  // 🔥 UPDATED: JOIN ROOM (Wait for API + minimum 2.5s for pencil animation)
   const handleJoin = async () => {
     if (inputCode.length !== 5) return alert("Enter valid 5-digit code!");
     setIsLoading(true);
     try {
-      // Promise.all ensures the pencil loader runs for AT LEAST 2500ms
       const [res] = await Promise.all([
           api.post('/room-check', { room: inputCode }),
           new Promise(resolve => setTimeout(resolve, 2500))
       ]);
       if (!res.data.name) { alert("❌ Room Not Found!"); return; }
-      sessionStorage.setItem('secureclip_room', inputCode); 
-      sessionStorage.setItem('secureclip_name', res.data.name);
-      setDisplayName(res.data.name); 
-      setRoom(inputCode);
-    } catch (err) { 
-        alert("Connection Error."); 
-    } finally { 
-        setIsLoading(false); 
-    }
+      sessionStorage.setItem('secureclip_room', inputCode); sessionStorage.setItem('secureclip_name', res.data.name);
+      setDisplayName(res.data.name); setRoom(inputCode);
+    } catch (err) { alert("Connection Error."); } finally { setIsLoading(false); }
   };
 
   const handleLogout = () => {
@@ -409,6 +411,7 @@ function App() {
       if(c === 'S') return "https://codingstella.com/wp-content/uploads/2024/01/download-2.png";
       return "https://codingstella.com/wp-content/uploads/2024/01/download.png"; 
   };
+  
   let rpsResultText = "Wait...";
   if (displayedRpsState.status === 'waiting') rpsResultText = "Waiting for Opponent...";
   else if (displayedRpsState.status === 'ready') rpsResultText = meRps?.choice ? "Waiting for Opponent..." : "Make your choice!";
@@ -602,8 +605,22 @@ function App() {
                                 
                                 <div style={{display:'flex', gap:'10px', marginTop:'30px'}}>
                                     <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveRpsGame}>Leave Match</button>
+                                    
+                                    {/* 🔥 NEW LOGIC: Wait for opponent button logic */}
                                     {displayedRpsState.status === 'revealing' && !rpsAnimating && (
-                                        <button className="full-btn" style={{background:'var(--accent-color)', color:'white', fontWeight:'bold'}} onClick={nextRpsRound}>Next Round</button>
+                                        <button 
+                                            className="full-btn" 
+                                            style={{
+                                                background: meRps?.wantsNext ? '#3f3f46' : 'var(--accent-color)', 
+                                                color:'white', 
+                                                fontWeight:'bold',
+                                                cursor: meRps?.wantsNext ? 'default' : 'pointer'
+                                            }} 
+                                            onClick={nextRpsRound}
+                                            disabled={meRps?.wantsNext}
+                                        >
+                                            {meRps?.wantsNext ? 'Waiting for Opponent...' : 'Next Round'}
+                                        </button>
                                     )}
                                 </div>
                             </div>
