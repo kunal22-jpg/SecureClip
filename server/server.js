@@ -240,7 +240,6 @@ app.post('/api/games/:gameId/move', (req, res) => {
     res.json(game);
 });
 
-// 🔥 NEW: Tic-Tac-Toe Self Destruct
 app.delete('/api/games/:gameId/leave', (req, res) => {
     const { gameId } = req.params;
     if (games[gameId]) delete games[gameId];
@@ -262,7 +261,8 @@ app.post('/api/rps/create', (req, res) => {
     const gameId = 'rps_' + Date.now().toString();
     rpsGames[gameId] = {
         id: gameId, room: room, status: 'waiting', result: null,
-        players: [{ id: userId, name: userName, choice: null, score: 0 }]
+        // 🔥 NEW: wantsNext prevents auto-skip
+        players: [{ id: userId, name: userName, choice: null, score: 0, wantsNext: false }]
     };
     res.json({ gameId });
 });
@@ -275,7 +275,7 @@ app.post('/api/rps/join', (req, res) => {
     if (existing) return res.json({ message: "Rejoined" });
     if (game.players.length >= 2) return res.status(400).json({ error: "Game is full!" });
 
-    game.players.push({ id: userId, name: userName, choice: null, score: 0 });
+    game.players.push({ id: userId, name: userName, choice: null, score: 0, wantsNext: false });
     game.status = 'ready'; 
     res.json({ message: "Joined" });
 });
@@ -326,19 +326,28 @@ app.post('/api/rps/:gameId/move', (req, res) => {
     res.json(game);
 });
 
+// 🔥 UPDATED: Wait for BOTH players to click Next Round
 app.post('/api/rps/:gameId/next', (req, res) => {
     const { gameId } = req.params;
+    const { userId } = req.body; 
     const game = rpsGames[gameId];
     if (!game) return res.status(404).send("No game");
     
-    if (game.status === 'revealing') {
-        game.status = 'ready'; game.result = null;
-        game.players.forEach(p => p.choice = null);
+    const player = game.players.find(p => p.id === userId);
+    if (player) player.wantsNext = true;
+
+    // Check if both want next
+    if (game.status === 'revealing' && game.players.length === 2 && game.players.every(p => p.wantsNext)) {
+        game.status = 'ready'; 
+        game.result = null;
+        game.players.forEach(p => {
+            p.choice = null;
+            p.wantsNext = false;
+        });
     }
     res.json(game);
 });
 
-// 🔥 NEW: RPS Self Destruct
 app.delete('/api/rps/:gameId/leave', (req, res) => {
     const { gameId } = req.params;
     if (rpsGames[gameId]) delete rpsGames[gameId];
