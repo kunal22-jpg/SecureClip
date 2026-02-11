@@ -41,6 +41,7 @@ function App() {
   const [displayedRpsState, setDisplayedRpsState] = useState({ status: 'waiting', result: null, players: [] });
   const [rpsAnimating, setRpsAnimating] = useState(false);
   const [isWaitingForNext, setIsWaitingForNext] = useState(false);
+  const isRpsAnimatingRef = useRef(false); 
 
   const [mode, setMode] = useState('create');
   const [inputName, setInputName] = useState(''); 
@@ -104,6 +105,9 @@ function App() {
 
     const syncGames = async () => {
         if (!showGameCenter) return;
+        
+        if (isLeavingRef.current) return;
+
         try {
             if (!activeGameId && !activeRpsId && gameTab === 'ttt') {
                 const res = await api.get(`/games/list?room=${room}`);
@@ -125,28 +129,33 @@ function App() {
                 setRpsLobbyGames(res.data);
             } else if (activeRpsId) {
                 try {
+                    if (isRpsAnimatingRef.current) return;
+
                     const res = await api.get(`/rps/${activeRpsId}?userId=${myUserId}`);
                     const newServerState = res.data;
                     
-                    // Trigger animation only if it's a fresh reveal
-                    if (newServerState.status === 'revealing' && displayedRpsState.status !== 'revealing' && displayedRpsState.status !== 'animating') {
+                    if (newServerState.status === 'revealing' && displayedRpsState.status !== 'revealing') {
+                        isRpsAnimatingRef.current = true; 
                         setRpsAnimating(true);
-                        setDisplayedRpsState({ ...newServerState, status: 'animating' }); // Lock local state to prevent flicker
+                        setDisplayedRpsState({ ...newServerState, status: 'animating' }); 
                         
                         setTimeout(() => {
+                            isRpsAnimatingRef.current = false; 
                             setRpsAnimating(false);
                             setDisplayedRpsState(newServerState);
                         }, 1400); 
-                    } else if (!rpsAnimating && displayedRpsState.status !== 'animating') {
-                        // Apply normal sync
+                    } else {
                         setDisplayedRpsState(newServerState);
-                        // If server reset the match, unlock our local wait button
-                        if (newServerState.status === 'ready') setIsWaitingForNext(false);
+                        // 🔥 STABILIZATION FIX: Only unlock "Waiting" if server is truly ready
+                        if (newServerState.status === 'ready') {
+                             setIsWaitingForNext(false);
+                        }
                     }
                 } catch (e) {
                     if (e.response && e.response.status === 404 && !isLeavingRef.current) {
                         setActiveRpsId(null);
                         setRpsAnimating(false);
+                        isRpsAnimatingRef.current = false;
                         setIsWaitingForNext(false);
                         setShowTerminatedModal(true);
                     }
@@ -176,7 +185,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeys);
       window.removeEventListener('beforeunload', handleUnload);
     };
-  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, rpsGameState.status, displayedRpsState.status, rpsAnimating]); 
+  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, displayedRpsState.status, rpsAnimating]); 
 
   const handleCloseGameCenter = () => {
       if (activeGameId) leaveGame();
@@ -233,15 +242,15 @@ function App() {
       isLeavingRef.current = true;
       try { await api.delete(`/games/${activeGameId}/leave`); } catch(e){}
       setActiveGameId(null);
-      setTimeout(() => { isLeavingRef.current = false; }, 1000);
+      setTimeout(() => { isLeavingRef.current = false; }, 2000); 
   };
 
   const createRpsGame = async () => {
-      setIsWaitingForNext(false); setRpsAnimating(false);
+      setIsWaitingForNext(false); setRpsAnimating(false); isRpsAnimatingRef.current = false;
       try { const res = await api.post('/rps/create', { room, userId: myUserId, userName: displayName }); setActiveRpsId(res.data.gameId); } catch (err) {}
   };
   const joinRpsGame = async (gameId) => {
-      setIsWaitingForNext(false); setRpsAnimating(false);
+      setIsWaitingForNext(false); setRpsAnimating(false); isRpsAnimatingRef.current = false;
       try { await api.post('/rps/join', { gameId, userId: myUserId, userName: displayName }); setActiveRpsId(gameId); } catch (err) {}
   };
   
@@ -256,7 +265,6 @@ function App() {
   };
   
   const nextRpsRound = async () => {
-      // ONLY update the lock. Do not update state, let the server handle it to prevent flicker.
       setIsWaitingForNext(true); 
       await api.post(`/rps/${activeRpsId}/next`, { userId: myUserId });
   };
@@ -264,8 +272,15 @@ function App() {
   const leaveRpsGame = async () => {
       isLeavingRef.current = true;
       try { await api.delete(`/rps/${activeRpsId}/leave`); } catch(e){}
-      setActiveRpsId(null); setRpsAnimating(false); setIsWaitingForNext(false);
-      setTimeout(() => { isLeavingRef.current = false; }, 1000);
+      setActiveRpsId(null); setRpsAnimating(false); isRpsAnimatingRef.current = false; setIsWaitingForNext(false);
+      setTimeout(() => { isLeavingRef.current = false; }, 2000);
+  };
+
+  const copyRoomCode = () => {
+      if (room) {
+          navigator.clipboard.writeText(room);
+          alert(`Room Code ${room} Copied!`);
+      }
   };
 
   const handleCreate = async () => {
@@ -390,16 +405,16 @@ function App() {
   const oppImg = (rpsAnimating || displayedRpsState.status !== 'revealing') ? getRpsImg('R') : getRpsImg(oppRps?.choice);
 
   let rpsResultText = "Wait...";
-  if (displayedRpsState.status === 'waiting') rpsResultText = "Waiting for Opponent...";
+  if (displayedRpsState.status === 'waiting') rpsResultText = "Waiting...";
   else if (displayedRpsState.status === 'ready' || displayedRpsState.status === 'animating') {
-      rpsResultText = meRps?.choice ? "Waiting for Opponent..." : "Make your choice!";
+      rpsResultText = meRps?.choice ? "Waiting..." : "Make your choice!";
   }
   else if (displayedRpsState.status === 'revealing') {
       if (rpsAnimating) rpsResultText = "Wait...";
       else {
           if (displayedRpsState.result === 'Draw') rpsResultText = "Match Draw!";
-          else if (displayedRpsState.result === myUserId) rpsResultText = "You Won!! 🎉";
-          else rpsResultText = "Opponent Won 😢";
+          else if (displayedRpsState.result === myUserId) rpsResultText = "YOU WON!! 🎉";
+          else rpsResultText = "OPPONENT WON 😢";
       }
   }
 
@@ -469,14 +484,9 @@ function App() {
         </div>
       )}
 
-      {/* 🔥 FULLY STABILIZED GAME CENTER MODAL */}
       {showGameCenter && (
           <div className="modal-overlay" onClick={() => handleCloseGameCenter()}>
-              <div className="modal-content" onClick={e => e.stopPropagation()} style={{
-                  display: 'flex', flexDirection: 'column', textAlign:'center', width:'90%', maxWidth:'420px', 
-                  minHeight: '480px', // STABILIZER: Locks vertical jumping completely
-                  background: modalBg, color: modalColor, borderRadius: '16px', padding: '24px', border: '1px solid var(--border-color)'
-              }}>
+              <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign:'center', width:'90%', maxWidth:'420px', background: modalBg, color: modalColor, borderRadius: '16px', padding: '24px', border: '1px solid var(--border-color)', minHeight: '480px', display:'flex', flexDirection:'column'}}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', alignItems:'center'}}>
                       <h3 style={{margin:0, color: 'white', fontSize:'1.6rem', fontWeight:'700'}}>{modalTitle}</h3>
                       <FaTimes style={{cursor:'pointer', color:'#ef4444', fontSize:'1.4rem'}} onClick={() => handleCloseGameCenter()} />
@@ -495,7 +505,6 @@ function App() {
                       </div>
                   )}
 
-                  {/* --- TIC-TAC-TOE VIEW --- */}
                   {(gameTab === 'ttt' && !activeRpsId) && (
                       <>
                         {!activeGameId ? (
@@ -520,7 +529,7 @@ function App() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="game-board-view" style={{display: 'flex', flexDirection: 'column', flexGrow: 1}}>
+                            <div className="game-board-view" style={{display:'flex', flexDirection:'column', flexGrow:1}}>
                                 <div className="status-bar" style={{marginBottom:'20px', height: '30px', display: 'flex', alignItems:'center', justifyContent: 'center', fontSize:'1.2rem', fontWeight:'bold', color: 'white'}}>
                                     {getStatusText()}
                                 </div>
@@ -539,7 +548,6 @@ function App() {
                       </>
                   )}
 
-                  {/* --- ROCK PAPER SCISSORS VIEW --- */}
                   {(gameTab === 'rps' && !activeGameId) && (
                       <>
                         {!activeRpsId ? (
@@ -564,9 +572,8 @@ function App() {
                                 </div>
                             </div>
                         ) : (
-                            <div className={`rps-arena ${rpsAnimating ? 'start' : ''}`} style={{display: 'flex', flexDirection: 'column', flexGrow: 1}}>
-                                
-                                <div className="result_field" style={{marginBottom: '1rem'}}>
+                            <div className={`rps-arena ${rpsAnimating ? 'start' : ''}`} style={{display:'flex', flexDirection:'column', flexGrow:1}}>
+                                <div className="result_field" style={{marginBottom: '2rem'}}>
                                     <div className="result_images">
                                         <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                                             <span className="user_result"><img src={myImg} alt="User" /></span>
@@ -579,8 +586,7 @@ function App() {
                                             <p style={{fontSize:'0.9rem', fontWeight:'700', color:'#ef4444'}}>Score: {oppRps?.score || 0}</p>
                                         </div>
                                     </div>
-                                    {/* STABILIZER: Fixed height for result text */}
-                                    <div className="result" style={{color: '#a855f7', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '15px 0 0 0', fontSize: '1.2rem', textAlign: 'center'}}>
+                                    <div className="result" style={{color: '#a855f7', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '15px 0 0 0', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '1px'}}>
                                         {rpsResultText}
                                     </div>
                                 </div>
@@ -591,9 +597,9 @@ function App() {
                                     <span className={`option_image ${meRps?.choice === 'S' ? 'active' : ''}`} onClick={() => makeRpsMove('S')}><img src="https://codingstella.com/wp-content/uploads/2024/01/download-2.png" alt="Scissors" /><p>Scissors</p></span>
                                 </div>
                                 
-                                {/* STABILIZER: Fixed button row height and width behavior */}
-                                <div style={{display:'flex', gap:'10px', marginTop: 'auto', height: '50px'}}>
-                                    <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold', flex: 1, margin: 0, padding: 0}} onClick={leaveRpsGame}>Leave</button>
+                                {/* 🔥 MODIFIED: LARGER RPS BUTTONS (55px height, 1.1rem font) */}
+                                <div style={{display:'flex', gap:'10px', marginTop: 'auto'}}>
+                                    <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold', flex: 1, margin: 0, padding: 0, height: '55px', fontSize: '1.1rem'}} onClick={leaveRpsGame}>Leave Match</button>
                                     
                                     {displayedRpsState.status === 'revealing' && !rpsAnimating ? (
                                         <button 
@@ -606,16 +612,16 @@ function App() {
                                                 flex: 1,
                                                 margin: 0,
                                                 padding: '0 5px',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
+                                                height: '55px',
+                                                fontSize: '1.1rem'
                                             }} 
                                             onClick={!isWaitingForNext ? nextRpsRound : undefined}
+                                            disabled={isWaitingForNext}
                                         >
                                             {isWaitingForNext ? 'Waiting...' : 'Next Round'}
                                         </button>
                                     ) : (
-                                        <div style={{flex: 1}}></div> /* Invisible spacer prevents layout shift */
+                                        <div style={{flex: 1}}></div> 
                                     )}
                                 </div>
                             </div>
@@ -661,7 +667,14 @@ function App() {
                 <div className="brand" style={{ flexShrink: 0 }}>SecureClip</div>
                 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center', minWidth: 0, flexGrow: 1, justifyContent: 'flex-end' }}>
-                    <div className="room-badge" title={`${displayName} #${room}`} style={{ display: 'flex', alignItems: 'center', maxWidth: '200px', padding: '6px 10px', flexShrink: 1, overflow: 'hidden' }}>
+                    
+                    {/* 🔥 MODIFIED: CLICK TO COPY HANDLER ADDED */}
+                    <div 
+                        className="room-badge" 
+                        title="Click to Copy Room Code" 
+                        onClick={copyRoomCode} 
+                        style={{ display: 'flex', alignItems: 'center', maxWidth: '140px', padding: '6px 10px', flexShrink: 1, overflow: 'hidden', cursor: 'pointer' }}
+                    >
                         <FaLock className="lock-icon" style={{ flexShrink: 0, marginRight: '6px' }} />
                         <span className="room-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {displayName}
