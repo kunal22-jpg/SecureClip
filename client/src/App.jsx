@@ -34,12 +34,13 @@ function App() {
   const [lobbyGames, setLobbyGames] = useState([]);
   const [gameState, setGameState] = useState({ board: Array(9).fill(null), turn: 'X', winner: null, winningLine: null, isDraw: false, players: [], status: 'waiting' });
 
-  // --- 🔥 RPS BULLETPROOF STATE ---
+  // --- RPS STATE ---
   const [activeRpsId, setActiveRpsId] = useState(null);
   const [rpsLobbyGames, setRpsLobbyGames] = useState([]);
+  const [rpsGameState, setRpsGameState] = useState({ status: 'waiting', result: null, players: [] });
   const [displayedRpsState, setDisplayedRpsState] = useState({ status: 'waiting', result: null, players: [] });
   const [rpsAnimating, setRpsAnimating] = useState(false);
-  const [isWaitingForNext, setIsWaitingForNext] = useState(false); // Fixes the Next Round flicker
+  const [isWaitingForNext, setIsWaitingForNext] = useState(false);
 
   const [mode, setMode] = useState('create');
   const [inputName, setInputName] = useState(''); 
@@ -104,7 +105,6 @@ function App() {
     const syncGames = async () => {
         if (!showGameCenter) return;
         try {
-            // --- TTT Polling ---
             if (!activeGameId && !activeRpsId && gameTab === 'ttt') {
                 const res = await api.get(`/games/list?room=${room}`);
                 setLobbyGames(res.data);
@@ -120,7 +120,6 @@ function App() {
                 }
             }
 
-            // --- 🔥 RPS Polling (Fixed Race Conditions) ---
             if (!activeRpsId && !activeGameId && gameTab === 'rps') {
                 const res = await api.get(`/rps/list?room=${room}`);
                 setRpsLobbyGames(res.data);
@@ -129,25 +128,19 @@ function App() {
                     const res = await api.get(`/rps/${activeRpsId}?userId=${myUserId}`);
                     const newServerState = res.data;
                     
-                    // 1. Trigger Animation: If server says revealing, but we aren't revealing OR animating yet
+                    // Trigger animation only if it's a fresh reveal
                     if (newServerState.status === 'revealing' && displayedRpsState.status !== 'revealing' && displayedRpsState.status !== 'animating') {
                         setRpsAnimating(true);
-                        // Force status to 'animating' so polling ignores it until done
-                        setDisplayedRpsState({ ...newServerState, status: 'animating' });
+                        setDisplayedRpsState({ ...newServerState, status: 'animating' }); // Lock local state to prevent flicker
                         
                         setTimeout(() => {
                             setRpsAnimating(false);
-                            setDisplayedRpsState(newServerState); // Lock in final results
+                            setDisplayedRpsState(newServerState);
                         }, 1400); 
-                    } 
-                    // 2. Ignore Updates: If we are actively animating, do NOTHING to avoid glitches
-                    else if (rpsAnimating || displayedRpsState.status === 'animating') {
-                        return;
-                    } 
-                    // 3. Normal Updates: Safely sync server to screen
-                    else {
+                    } else if (!rpsAnimating && displayedRpsState.status !== 'animating') {
+                        // Apply normal sync
                         setDisplayedRpsState(newServerState);
-                        // Reset "Next Round" lock if server has reset to 'ready'
+                        // If server reset the match, unlock our local wait button
                         if (newServerState.status === 'ready') setIsWaitingForNext(false);
                     }
                 } catch (e) {
@@ -163,7 +156,12 @@ function App() {
     };
 
     if (showGameCenter) syncGames();
-    const interval = setInterval(() => { fetchClips(); if (showGameCenter) syncGames(); }, 1000); 
+
+    const interval = setInterval(() => {
+        fetchClips();
+        if (showGameCenter) syncGames();
+    }, 1000); 
+
     window.addEventListener('keydown', handleGlobalKeys);
 
     const handleUnload = () => {
@@ -178,7 +176,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeys);
       window.removeEventListener('beforeunload', handleUnload);
     };
-  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, displayedRpsState.status, rpsAnimating]); 
+  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, rpsGameState.status, displayedRpsState.status, rpsAnimating]); 
 
   const handleCloseGameCenter = () => {
       if (activeGameId) leaveGame();
@@ -238,7 +236,6 @@ function App() {
       setTimeout(() => { isLeavingRef.current = false; }, 1000);
   };
 
-  // --- RPS FUNCTIONS ---
   const createRpsGame = async () => {
       setIsWaitingForNext(false); setRpsAnimating(false);
       try { const res = await api.post('/rps/create', { room, userId: myUserId, userName: displayName }); setActiveRpsId(res.data.gameId); } catch (err) {}
@@ -249,7 +246,7 @@ function App() {
   };
   
   const makeRpsMove = async (choice) => {
-      if (displayedRpsState.status === 'finished' || displayedRpsState.status === 'revealing' || rpsAnimating) return;
+      if (displayedRpsState.status === 'finished' || displayedRpsState.status === 'revealing' || displayedRpsState.status === 'animating' || rpsAnimating) return;
       const me = displayedRpsState.players.find(p => p.id === myUserId);
       if (me?.choice) return; 
       
@@ -259,7 +256,8 @@ function App() {
   };
   
   const nextRpsRound = async () => {
-      setIsWaitingForNext(true); // 🔥 Optimistically lock the button immediately
+      // ONLY update the lock. Do not update state, let the server handle it to prevent flicker.
+      setIsWaitingForNext(true); 
       await api.post(`/rps/${activeRpsId}/next`, { userId: myUserId });
   };
   
@@ -379,10 +377,8 @@ function App() {
       return <span>Turn: <span style={{color: gameState.turn === 'X' ? '#a855f7' : '#4ade80'}}>{gameState.turn}</span></span>;
   };
 
-  // --- 🔥 RPS UI LOGIC ---
   const meRps = displayedRpsState.players?.find(p => p.id === myUserId);
   const oppRps = displayedRpsState.players?.find(p => p.id !== myUserId);
-  
   const getRpsImg = (c) => {
       if(c === 'R') return "https://codingstella.com/wp-content/uploads/2024/01/download.png";
       if(c === 'P') return "https://codingstella.com/wp-content/uploads/2024/01/download-1.png";
@@ -390,7 +386,6 @@ function App() {
       return "https://codingstella.com/wp-content/uploads/2024/01/download.png"; 
   };
   
-  // Clean Image Logic: If animating OR not revealing, show rock (fist)
   const myImg = (rpsAnimating || displayedRpsState.status !== 'revealing') ? getRpsImg('R') : getRpsImg(meRps?.choice);
   const oppImg = (rpsAnimating || displayedRpsState.status !== 'revealing') ? getRpsImg('R') : getRpsImg(oppRps?.choice);
 
@@ -474,10 +469,14 @@ function App() {
         </div>
       )}
 
-      {/* 🔥 DARK THEMED GAME CENTER MODAL */}
+      {/* 🔥 FULLY STABILIZED GAME CENTER MODAL */}
       {showGameCenter && (
           <div className="modal-overlay" onClick={() => handleCloseGameCenter()}>
-              <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign:'center', width:'90%', maxWidth:'420px', background: modalBg, color: modalColor, borderRadius: '16px', padding: '24px', border: '1px solid var(--border-color)'}}>
+              <div className="modal-content" onClick={e => e.stopPropagation()} style={{
+                  display: 'flex', flexDirection: 'column', textAlign:'center', width:'90%', maxWidth:'420px', 
+                  minHeight: '480px', // STABILIZER: Locks vertical jumping completely
+                  background: modalBg, color: modalColor, borderRadius: '16px', padding: '24px', border: '1px solid var(--border-color)'
+              }}>
                   <div style={{display:'flex', justifyContent:'space-between', marginBottom:'20px', alignItems:'center'}}>
                       <h3 style={{margin:0, color: 'white', fontSize:'1.6rem', fontWeight:'700'}}>{modalTitle}</h3>
                       <FaTimes style={{cursor:'pointer', color:'#ef4444', fontSize:'1.4rem'}} onClick={() => handleCloseGameCenter()} />
@@ -504,7 +503,7 @@ function App() {
                                 <button className="full-btn" onClick={createGame} style={{marginBottom:'20px', background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)', borderRadius: '12px', fontWeight: 'bold'}}>
                                     + Create Tic-Tac-Toe
                                 </button>
-                                <div style={{maxHeight:'200px', overflowY:'auto', display:'flex', flexDirection:'column', gap:'10px'}}>
+                                <div style={{maxHeight:'240px', overflowY:'auto', display:'flex', flexDirection:'column', gap:'10px'}}>
                                     {lobbyGames.length === 0 ? (
                                         <p style={{opacity:0.5, fontStyle:'italic', color:'var(--text-secondary)'}}>No active games. Start one!</p>
                                     ) : (
@@ -521,8 +520,8 @@ function App() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="game-board-view">
-                                <div className="status-bar" style={{marginBottom:'20px', fontSize:'1.2rem', fontWeight:'bold', color: 'white'}}>
+                            <div className="game-board-view" style={{display: 'flex', flexDirection: 'column', flexGrow: 1}}>
+                                <div className="status-bar" style={{marginBottom:'20px', height: '30px', display: 'flex', alignItems:'center', justifyContent: 'center', fontSize:'1.2rem', fontWeight:'bold', color: 'white'}}>
                                     {getStatusText()}
                                 </div>
                                 <div className="tic-tac-grid" style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'10px', background:'rgba(255,255,255,0.05)', padding:'10px', borderRadius:'15px', border:'1px solid var(--border-color)'}}>
@@ -534,7 +533,7 @@ function App() {
                                           }}>{cell}</div>
                                     ))}
                                 </div>
-                                <button className="full-btn" style={{marginTop:'20px', background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveGame}>Leave Match</button>
+                                <button className="full-btn" style={{marginTop:'auto', height: '50px', background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveGame}>Leave Match</button>
                             </div>
                         )}
                       </>
@@ -548,7 +547,7 @@ function App() {
                                 <button className="full-btn" onClick={createRpsGame} style={{marginBottom:'20px', background: 'var(--accent-color)', borderRadius: '12px', fontWeight: 'bold'}}>
                                     + Create RPS Match
                                 </button>
-                                <div style={{maxHeight:'200px', overflowY:'auto', display:'flex', flexDirection:'column', gap:'10px'}}>
+                                <div style={{maxHeight:'240px', overflowY:'auto', display:'flex', flexDirection:'column', gap:'10px'}}>
                                     {rpsLobbyGames.length === 0 ? (
                                         <p style={{opacity:0.5, fontStyle:'italic', color:'var(--text-secondary)'}}>No active matches. Start one!</p>
                                     ) : (
@@ -565,8 +564,9 @@ function App() {
                                 </div>
                             </div>
                         ) : (
-                            <div className={`rps-arena ${rpsAnimating ? 'start' : ''}`} style={{minHeight: '320px'}}>
-                                <div className="result_field" style={{marginBottom: '2rem'}}>
+                            <div className={`rps-arena ${rpsAnimating ? 'start' : ''}`} style={{display: 'flex', flexDirection: 'column', flexGrow: 1}}>
+                                
+                                <div className="result_field" style={{marginBottom: '1rem'}}>
                                     <div className="result_images">
                                         <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                                             <span className="user_result"><img src={myImg} alt="User" /></span>
@@ -579,32 +579,43 @@ function App() {
                                             <p style={{fontSize:'0.9rem', fontWeight:'700', color:'#ef4444'}}>Score: {oppRps?.score || 0}</p>
                                         </div>
                                     </div>
-                                    <div className="result" style={{color: '#a855f7', minHeight: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{rpsResultText}</div>
+                                    {/* STABILIZER: Fixed height for result text */}
+                                    <div className="result" style={{color: '#a855f7', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '15px 0 0 0', fontSize: '1.2rem', textAlign: 'center'}}>
+                                        {rpsResultText}
+                                    </div>
                                 </div>
 
-                                <div className={`option_images ${displayedRpsState.status !== 'ready' || meRps?.choice ? 'disabled' : ''}`} style={{background:'rgba(255,255,255,0.05)', border:'1px solid var(--border-color)'}}>
+                                <div className={`option_images ${displayedRpsState.status !== 'ready' || meRps?.choice ? 'disabled' : ''}`} style={{background:'rgba(255,255,255,0.05)', border:'1px solid var(--border-color)', margin: '0 0 10px 0'}}>
                                     <span className={`option_image ${meRps?.choice === 'R' ? 'active' : ''}`} onClick={() => makeRpsMove('R')}><img src="https://codingstella.com/wp-content/uploads/2024/01/download.png" alt="Rock" /><p>Rock</p></span>
                                     <span className={`option_image ${meRps?.choice === 'P' ? 'active' : ''}`} onClick={() => makeRpsMove('P')}><img src="https://codingstella.com/wp-content/uploads/2024/01/download-1.png" alt="Paper" /><p>Paper</p></span>
                                     <span className={`option_image ${meRps?.choice === 'S' ? 'active' : ''}`} onClick={() => makeRpsMove('S')}><img src="https://codingstella.com/wp-content/uploads/2024/01/download-2.png" alt="Scissors" /><p>Scissors</p></span>
                                 </div>
                                 
-                                <div style={{display:'flex', gap:'10px', marginTop:'30px'}}>
-                                    <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveRpsGame}>Leave Match</button>
+                                {/* STABILIZER: Fixed button row height and width behavior */}
+                                <div style={{display:'flex', gap:'10px', marginTop: 'auto', height: '50px'}}>
+                                    <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold', flex: 1, margin: 0, padding: 0}} onClick={leaveRpsGame}>Leave</button>
                                     
-                                    {/* 🔥 FIXED NEXT ROUND: Local lock prevents flickering */}
-                                    {displayedRpsState.status === 'revealing' && !rpsAnimating && (
+                                    {displayedRpsState.status === 'revealing' && !rpsAnimating ? (
                                         <button 
                                             className="full-btn" 
                                             style={{
                                                 background: isWaitingForNext ? '#3f3f46' : 'var(--accent-color)', 
                                                 color:'white', 
                                                 fontWeight:'bold',
-                                                cursor: isWaitingForNext ? 'default' : 'pointer'
+                                                cursor: isWaitingForNext ? 'default' : 'pointer',
+                                                flex: 1,
+                                                margin: 0,
+                                                padding: '0 5px',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
                                             }} 
                                             onClick={!isWaitingForNext ? nextRpsRound : undefined}
                                         >
-                                            {isWaitingForNext ? 'Waiting for Opponent...' : 'Next Round'}
+                                            {isWaitingForNext ? 'Waiting...' : 'Next Round'}
                                         </button>
+                                    ) : (
+                                        <div style={{flex: 1}}></div> /* Invisible spacer prevents layout shift */
                                     )}
                                 </div>
                             </div>
@@ -615,7 +626,6 @@ function App() {
           </div>
       )}
 
-      {/* 🔥 CUSTOM DARK THEMED "OPPONENT LEFT" MODAL */}
       {showTerminatedModal && (
         <div className="modal-overlay" onClick={() => setShowTerminatedModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{textAlign:'center', maxWidth:'400px', background: 'var(--card-bg)', border: '1px solid #ef4444'}}>
