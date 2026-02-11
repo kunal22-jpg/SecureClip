@@ -827,3 +827,236 @@ input[type=number] {
     filter: hue-rotate(20deg);
   }
 }
+/* ----------------------------------------------------- */
+/* 🔥🔥🔥 ROCK PAPER SCISSORS GAME CSS 🔥🔥🔥 */
+/* ----------------------------------------------------- */
+
+.rps-arena .result_images {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1rem;
+}
+
+.rps-arena.start .user_result {
+  transform-origin: left;
+  animation: userShake 0.7s ease infinite;
+}
+
+@keyframes userShake {
+  50% { transform: rotate(10deg); }
+}
+
+.rps-arena.start .cpu_result {
+  transform-origin: right;
+  animation: cpuShake 0.7s ease infinite;
+}
+
+@keyframes cpuShake {
+  50% { transform: rotate(-10deg); }
+}
+
+.result_images img {
+  width: 70px;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+.user_result img {
+  transform: rotate(90deg);
+}
+
+.cpu_result img {
+  transform: rotate(-90deg) rotateY(180deg);
+}
+
+.rps-arena .result {
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #7d2ae8;
+  margin-top: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.option_images {
+  display: flex;
+  align-items: center;
+  margin-top: 1.5rem;
+  justify-content: space-between;
+  background: #f6f7fb;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.rps-arena.start .option_images,
+.rps-arena .option_images.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
+
+.option_image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.option_image:hover {
+  opacity: 1;
+  transform: translateY(-4px);
+  background: rgba(125, 42, 232, 0.05);
+}
+
+.option_image.active {
+  opacity: 1;
+  background: rgba(125, 42, 232, 0.1);
+  box-shadow: 0 0 0 2px #7d2ae8;
+}
+
+.option_image img {
+  width: 45px;
+  pointer-events: none;
+}
+
+.option_image p {
+  color: #7d2ae8;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  pointer-events: none;
+}
+
+/* Mobile Adjustments for RPS */
+@media screen and (max-width: 768px) {
+  .rps-arena .result_images { padding: 0; }
+  .result_images img { width: 60px; }
+  .option_image img { width: 35px; }
+  .option_images { padding: 10px; }
+  .option_image p { font-size: 0.8rem; }
+}
+/* --- ✏️ CRAZY PENCIL LOADER ANIMATION --- */
+.loader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 16, 20, 0.95); 
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+}
+
+.pencil {
+  display: block;
+  width: 10em;
+  height: 10em;
+  /* Make sure the main SVG color stands out against the dark background */
+  color: #a855f7; 
+}
+
+/* 🔥 The vital fix: Explicitly link the class names to the keyframes */
+.pencil__body1 {
+  animation: pencilBody1 3s linear infinite;
+  transform: rotate(-90deg);
+}
+
+.pencil__body2 {
+  animation: pencilBody2 3s linear infinite;
+  transform: rotate(-90deg);
+}
+
+.pencil__body3 {
+  animation: pencilBody3 3s linear infinite;
+  transform: rotate(-90deg);
+}
+
+.pencil__eraser {
+  animation: pencilEraser 3s linear infinite;
+  transform: rotate(-90deg) translate(49px, 0);
+}
+
+.pencil__eraser-skew {
+  animation: pencilEraserSkew 3s ease-in-out infinite;
+}
+
+.pencil__point {
+  animation: pencilPoint 3s linear infinite;
+  transform: rotate(-90deg) translate(49px, -30px);
+}
+
+.pencil__rotate {
+  animation: pencilRotate 3s linear infinite;
+}
+
+.pencil__stroke {
+  animation: pencilStroke 3s linear infinite;
+  transform: translate(100px, 100px) rotate(-113deg);
+}
+
+/* Animations (Exactly as provided) */
+@keyframes pencilBody1 {
+  from, to { stroke-dashoffset: 351.86; transform: rotate(-90deg); }
+  50% { stroke-dashoffset: 150.8; transform: rotate(-225deg); }
+}
+
+@keyframes pencilBody2 {
+  from, to { stroke-dashoffset: 406.84; transform: rotate(-90deg); }
+  50% { stroke-dashoffset: 174.36; transform: rotate(-225deg); }
+}
+
+@keyframes pencilBody3 {
+  from, to { stroke-dashoffset: 296.88; transform: rotate(-90deg); }
+  50% { stroke-dashoffset: 127.23; transform: rotate(-225deg); }
+}
+
+@keyframes pencilEraser {
+  from, to { transform: rotate(-45deg) translate(49px, 0); }
+  50% { transform: rotate(0deg) translate(49px, 0); }
+}
+
+@keyframes pencilEraserSkew {
+  from, 32.5%, 67.5%, to { transform: skewX(0); }
+  35%, 65% { transform: skewX(-4deg); }
+  37.5%, 62.5% { transform: skewX(8deg); }
+  40%, 45%, 50%, 55%, 60% { transform: skewX(-15deg); }
+  42.5%, 47.5%, 52.5%, 57.5% { transform: skewX(15deg); }
+}
+
+@keyframes pencilPoint {
+  from, to { transform: rotate(-90deg) translate(49px, -30px); }
+  50% { transform: rotate(-225deg) translate(49px, -30px); }
+}
+
+@keyframes pencilRotate {
+  from { transform: translate(100px, 100px) rotate(0); }
+  to { transform: translate(100px, 100px) rotate(720deg); }
+}
+
+@keyframes pencilStroke {
+  from { stroke-dashoffset: 439.82; transform: translate(100px, 100px) rotate(-113deg); }
+  50% { stroke-dashoffset: 164.93; transform: translate(100px, 100px) rotate(-113deg); }
+  75%, to { stroke-dashoffset: 439.82; transform: translate(100px, 100px) rotate(112deg); }
+}
+
+.boot-text {
+  margin-top: 40px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
