@@ -29,15 +29,17 @@ function App() {
   const [showGameCenter, setShowGameCenter] = useState(false);
   const [gameTab, setGameTab] = useState('ttt'); 
 
+  // --- TIC TAC TOE STATE ---
   const [activeGameId, setActiveGameId] = useState(null);
   const [lobbyGames, setLobbyGames] = useState([]);
   const [gameState, setGameState] = useState({ board: Array(9).fill(null), turn: 'X', winner: null, winningLine: null, isDraw: false, players: [], status: 'waiting' });
 
+  // --- 🔥 RPS BULLETPROOF STATE ---
   const [activeRpsId, setActiveRpsId] = useState(null);
   const [rpsLobbyGames, setRpsLobbyGames] = useState([]);
-  const [rpsGameState, setRpsGameState] = useState({ status: 'waiting', result: null, players: [] });
   const [displayedRpsState, setDisplayedRpsState] = useState({ status: 'waiting', result: null, players: [] });
   const [rpsAnimating, setRpsAnimating] = useState(false);
+  const [isWaitingForNext, setIsWaitingForNext] = useState(false); // Fixes the Next Round flicker
 
   const [mode, setMode] = useState('create');
   const [inputName, setInputName] = useState(''); 
@@ -102,6 +104,7 @@ function App() {
     const syncGames = async () => {
         if (!showGameCenter) return;
         try {
+            // --- TTT Polling ---
             if (!activeGameId && !activeRpsId && gameTab === 'ttt') {
                 const res = await api.get(`/games/list?room=${room}`);
                 setLobbyGames(res.data);
@@ -117,6 +120,7 @@ function App() {
                 }
             }
 
+            // --- 🔥 RPS Polling (Fixed Race Conditions) ---
             if (!activeRpsId && !activeGameId && gameTab === 'rps') {
                 const res = await api.get(`/rps/list?room=${room}`);
                 setRpsLobbyGames(res.data);
@@ -125,21 +129,32 @@ function App() {
                     const res = await api.get(`/rps/${activeRpsId}?userId=${myUserId}`);
                     const newServerState = res.data;
                     
-                    // 🔥 EXACT 1400ms DELAY (matches 0.7s CSS animation perfectly x2)
-                    if (newServerState.status === 'revealing' && rpsGameState.status !== 'revealing' && !rpsAnimating) {
+                    // 1. Trigger Animation: If server says revealing, but we aren't revealing OR animating yet
+                    if (newServerState.status === 'revealing' && displayedRpsState.status !== 'revealing' && displayedRpsState.status !== 'animating') {
                         setRpsAnimating(true);
-                        setRpsGameState(newServerState);
+                        // Force status to 'animating' so polling ignores it until done
+                        setDisplayedRpsState({ ...newServerState, status: 'animating' });
+                        
                         setTimeout(() => {
                             setRpsAnimating(false);
-                            setDisplayedRpsState(newServerState);
+                            setDisplayedRpsState(newServerState); // Lock in final results
                         }, 1400); 
-                    } else if (!rpsAnimating) {
-                        setRpsGameState(newServerState);
+                    } 
+                    // 2. Ignore Updates: If we are actively animating, do NOTHING to avoid glitches
+                    else if (rpsAnimating || displayedRpsState.status === 'animating') {
+                        return;
+                    } 
+                    // 3. Normal Updates: Safely sync server to screen
+                    else {
                         setDisplayedRpsState(newServerState);
+                        // Reset "Next Round" lock if server has reset to 'ready'
+                        if (newServerState.status === 'ready') setIsWaitingForNext(false);
                     }
                 } catch (e) {
                     if (e.response && e.response.status === 404 && !isLeavingRef.current) {
                         setActiveRpsId(null);
+                        setRpsAnimating(false);
+                        setIsWaitingForNext(false);
                         setShowTerminatedModal(true);
                     }
                 }
@@ -148,12 +163,7 @@ function App() {
     };
 
     if (showGameCenter) syncGames();
-
-    const interval = setInterval(() => {
-        fetchClips();
-        if (showGameCenter) syncGames();
-    }, 1000); 
-
+    const interval = setInterval(() => { fetchClips(); if (showGameCenter) syncGames(); }, 1000); 
     window.addEventListener('keydown', handleGlobalKeys);
 
     const handleUnload = () => {
@@ -168,7 +178,7 @@ function App() {
       window.removeEventListener('keydown', handleGlobalKeys);
       window.removeEventListener('beforeunload', handleUnload);
     };
-  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, rpsGameState.status, rpsAnimating]); 
+  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, displayedRpsState.status, rpsAnimating]); 
 
   const handleCloseGameCenter = () => {
       if (activeGameId) leaveGame();
@@ -201,38 +211,26 @@ function App() {
   };
 
   const createGame = async () => {
-      try {
-          const res = await api.post('/games/create', { room, userId: myUserId, userName: displayName });
-          setActiveGameId(res.data.gameId);
-      } catch (err) { alert("Could not create game"); }
+      try { const res = await api.post('/games/create', { room, userId: myUserId, userName: displayName }); setActiveGameId(res.data.gameId); } catch (err) { alert("Could not create game"); }
   };
   const joinGame = async (gameId) => {
-      try {
-          await api.post('/games/join', { gameId, userId: myUserId, userName: displayName });
-          setActiveGameId(gameId);
-      } catch (err) { alert(err.response?.data?.error || "Game full or unavailable"); }
+      try { await api.post('/games/join', { gameId, userId: myUserId, userName: displayName }); setActiveGameId(gameId); } catch (err) { alert(err.response?.data?.error || "Game full or unavailable"); }
   };
   const makeMove = async (index) => {
       if (gameState.board[index] || gameState.winner || gameState.isDraw) return;
       const me = gameState.players.find(p => p.id === myUserId);
       if (!me || me.symbol !== gameState.turn) return;
 
-      const newBoard = [...gameState.board];
-      newBoard[index] = gameState.turn;
-
-      let localWinner = null;
-      let localLine = null;
+      const newBoard = [...gameState.board]; newBoard[index] = gameState.turn;
+      let localWinner = null; let localLine = null;
       const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
       for (let i = 0; i < lines.length; i++) {
           const [a, b, c] = lines[i];
-          if (newBoard[a] && newBoard[a] === newBoard[b] && newBoard[a] === newBoard[c]) {
-              localWinner = newBoard[a]; localLine = lines[i]; break;
-          }
+          if (newBoard[a] && newBoard[a] === newBoard[b] && newBoard[a] === newBoard[c]) { localWinner = newBoard[a]; localLine = lines[i]; break; }
       }
       setGameState(prev => ({ ...prev, board: newBoard, winner: localWinner || prev.winner, winningLine: localLine || prev.winningLine }));
       await api.post(`/games/${activeGameId}/move`, { index, userId: myUserId });
   };
-  
   const leaveGame = async () => {
       isLeavingRef.current = true;
       try { await api.delete(`/games/${activeGameId}/leave`); } catch(e){}
@@ -240,57 +238,35 @@ function App() {
       setTimeout(() => { isLeavingRef.current = false; }, 1000);
   };
 
+  // --- RPS FUNCTIONS ---
   const createRpsGame = async () => {
-      try {
-          const res = await api.post('/rps/create', { room, userId: myUserId, userName: displayName });
-          setActiveRpsId(res.data.gameId);
-      } catch (err) { alert("Could not create RPS game"); }
+      setIsWaitingForNext(false); setRpsAnimating(false);
+      try { const res = await api.post('/rps/create', { room, userId: myUserId, userName: displayName }); setActiveRpsId(res.data.gameId); } catch (err) {}
   };
   const joinRpsGame = async (gameId) => {
-      try {
-          await api.post('/rps/join', { gameId, userId: myUserId, userName: displayName });
-          setActiveRpsId(gameId);
-      } catch (err) { alert(err.response?.data?.error || "Game full or unavailable"); }
+      setIsWaitingForNext(false); setRpsAnimating(false);
+      try { await api.post('/rps/join', { gameId, userId: myUserId, userName: displayName }); setActiveRpsId(gameId); } catch (err) {}
   };
-
-  // 🔥 Make RPS Move triggers immediate 1400ms animation if it's the finishing move
+  
   const makeRpsMove = async (choice) => {
-      if (rpsGameState.status === 'finished' || rpsGameState.status === 'revealing') return;
-      const me = rpsGameState.players.find(p => p.id === myUserId);
+      if (displayedRpsState.status === 'finished' || displayedRpsState.status === 'revealing' || rpsAnimating) return;
+      const me = displayedRpsState.players.find(p => p.id === myUserId);
       if (me?.choice) return; 
       
-      const newPlayersState = rpsGameState.players.map(p => p.id === myUserId ? { ...p, choice } : p);
-      setRpsGameState(prev => ({ ...prev, players: newPlayersState }));
+      const newPlayersState = displayedRpsState.players.map(p => p.id === myUserId ? { ...p, choice } : p);
       setDisplayedRpsState(prev => ({ ...prev, players: newPlayersState }));
-      
-      try {
-          const res = await api.post(`/rps/${activeRpsId}/move`, { choice, userId: myUserId });
-          const newServerState = res.data;
-          if (newServerState.status === 'revealing' && !rpsAnimating) {
-              setRpsAnimating(true);
-              setRpsGameState(newServerState);
-              setTimeout(() => {
-                  setRpsAnimating(false);
-                  setDisplayedRpsState(newServerState);
-              }, 1400); 
-          }
-      } catch(e){}
+      await api.post(`/rps/${activeRpsId}/move`, { choice, userId: myUserId });
   };
-
-  // 🔥 NEXT ROUND: Wait for opponent
+  
   const nextRpsRound = async () => {
-      // Optimistically show waiting state in UI
-      const newPlayers = displayedRpsState.players.map(p => p.id === myUserId ? { ...p, wantsNext: true } : p);
-      setDisplayedRpsState(prev => ({ ...prev, players: newPlayers }));
-      // Tell server we are ready
+      setIsWaitingForNext(true); // 🔥 Optimistically lock the button immediately
       await api.post(`/rps/${activeRpsId}/next`, { userId: myUserId });
   };
-
+  
   const leaveRpsGame = async () => {
       isLeavingRef.current = true;
       try { await api.delete(`/rps/${activeRpsId}/leave`); } catch(e){}
-      setActiveRpsId(null);
-      setRpsAnimating(false);
+      setActiveRpsId(null); setRpsAnimating(false); setIsWaitingForNext(false);
       setTimeout(() => { isLeavingRef.current = false; }, 1000);
   };
 
@@ -403,8 +379,10 @@ function App() {
       return <span>Turn: <span style={{color: gameState.turn === 'X' ? '#a855f7' : '#4ade80'}}>{gameState.turn}</span></span>;
   };
 
+  // --- 🔥 RPS UI LOGIC ---
   const meRps = displayedRpsState.players?.find(p => p.id === myUserId);
   const oppRps = displayedRpsState.players?.find(p => p.id !== myUserId);
+  
   const getRpsImg = (c) => {
       if(c === 'R') return "https://codingstella.com/wp-content/uploads/2024/01/download.png";
       if(c === 'P') return "https://codingstella.com/wp-content/uploads/2024/01/download-1.png";
@@ -412,9 +390,15 @@ function App() {
       return "https://codingstella.com/wp-content/uploads/2024/01/download.png"; 
   };
   
+  // Clean Image Logic: If animating OR not revealing, show rock (fist)
+  const myImg = (rpsAnimating || displayedRpsState.status !== 'revealing') ? getRpsImg('R') : getRpsImg(meRps?.choice);
+  const oppImg = (rpsAnimating || displayedRpsState.status !== 'revealing') ? getRpsImg('R') : getRpsImg(oppRps?.choice);
+
   let rpsResultText = "Wait...";
   if (displayedRpsState.status === 'waiting') rpsResultText = "Waiting for Opponent...";
-  else if (displayedRpsState.status === 'ready') rpsResultText = meRps?.choice ? "Waiting for Opponent..." : "Make your choice!";
+  else if (displayedRpsState.status === 'ready' || displayedRpsState.status === 'animating') {
+      rpsResultText = meRps?.choice ? "Waiting for Opponent..." : "Make your choice!";
+  }
   else if (displayedRpsState.status === 'revealing') {
       if (rpsAnimating) rpsResultText = "Wait...";
       else {
@@ -436,9 +420,7 @@ function App() {
       {isLoading && (
         <div className="loader-overlay">
           <svg className="pencil" viewBox="0 0 200 200" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                  <clipPath id="pencil-eraser"><rect rx="5" ry="5" width="30" height="30"></rect></clipPath>
-              </defs>
+              <defs><clipPath id="pencil-eraser"><rect rx="5" ry="5" width="30" height="30"></rect></clipPath></defs>
               <circle className="pencil__stroke" r="70" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="439.82 439.82" strokeDashoffset="439.82" strokeLinecap="round" transform="rotate(-113,100,100)" />
               <g className="pencil__rotate" transform="translate(100,100)">
                   <g fill="none">
@@ -492,6 +474,7 @@ function App() {
         </div>
       )}
 
+      {/* 🔥 DARK THEMED GAME CENTER MODAL */}
       {showGameCenter && (
           <div className="modal-overlay" onClick={() => handleCloseGameCenter()}>
               <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign:'center', width:'90%', maxWidth:'420px', background: modalBg, color: modalColor, borderRadius: '16px', padding: '24px', border: '1px solid var(--border-color)'}}>
@@ -513,6 +496,7 @@ function App() {
                       </div>
                   )}
 
+                  {/* --- TIC-TAC-TOE VIEW --- */}
                   {(gameTab === 'ttt' && !activeRpsId) && (
                       <>
                         {!activeGameId ? (
@@ -556,6 +540,7 @@ function App() {
                       </>
                   )}
 
+                  {/* --- ROCK PAPER SCISSORS VIEW --- */}
                   {(gameTab === 'rps' && !activeGameId) && (
                       <>
                         {!activeRpsId ? (
@@ -580,21 +565,21 @@ function App() {
                                 </div>
                             </div>
                         ) : (
-                            <div className={`rps-arena ${rpsAnimating ? 'start' : ''}`}>
+                            <div className={`rps-arena ${rpsAnimating ? 'start' : ''}`} style={{minHeight: '320px'}}>
                                 <div className="result_field" style={{marginBottom: '2rem'}}>
                                     <div className="result_images">
                                         <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                                            <span className="user_result"><img src={rpsAnimating || displayedRpsState.status !== 'revealing' ? getRpsImg('R') : getRpsImg(meRps?.choice)} alt="User" /></span>
+                                            <span className="user_result"><img src={myImg} alt="User" /></span>
                                             <p style={{fontWeight:'bold', color:'white', marginTop:'10px'}}>You</p>
                                             <p style={{fontSize:'0.9rem', fontWeight:'700', color:'#4ade80'}}>Score: {meRps?.score || 0}</p>
                                         </div>
                                         <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                                            <span className="cpu_result"><img src={rpsAnimating || displayedRpsState.status !== 'revealing' ? getRpsImg('R') : getRpsImg(oppRps?.choice)} alt="Opponent" /></span>
+                                            <span className="cpu_result"><img src={oppImg} alt="Opponent" /></span>
                                             <p style={{fontWeight:'bold', color:'white', marginTop:'10px'}}>{oppRps ? 'Opponent' : 'Waiting...'}</p>
                                             <p style={{fontSize:'0.9rem', fontWeight:'700', color:'#ef4444'}}>Score: {oppRps?.score || 0}</p>
                                         </div>
                                     </div>
-                                    <div className="result" style={{color: '#a855f7'}}>{rpsResultText}</div>
+                                    <div className="result" style={{color: '#a855f7', minHeight: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>{rpsResultText}</div>
                                 </div>
 
                                 <div className={`option_images ${displayedRpsState.status !== 'ready' || meRps?.choice ? 'disabled' : ''}`} style={{background:'rgba(255,255,255,0.05)', border:'1px solid var(--border-color)'}}>
@@ -606,20 +591,19 @@ function App() {
                                 <div style={{display:'flex', gap:'10px', marginTop:'30px'}}>
                                     <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveRpsGame}>Leave Match</button>
                                     
-                                    {/* 🔥 NEW LOGIC: Wait for opponent button logic */}
+                                    {/* 🔥 FIXED NEXT ROUND: Local lock prevents flickering */}
                                     {displayedRpsState.status === 'revealing' && !rpsAnimating && (
                                         <button 
                                             className="full-btn" 
                                             style={{
-                                                background: meRps?.wantsNext ? '#3f3f46' : 'var(--accent-color)', 
+                                                background: isWaitingForNext ? '#3f3f46' : 'var(--accent-color)', 
                                                 color:'white', 
                                                 fontWeight:'bold',
-                                                cursor: meRps?.wantsNext ? 'default' : 'pointer'
+                                                cursor: isWaitingForNext ? 'default' : 'pointer'
                                             }} 
-                                            onClick={nextRpsRound}
-                                            disabled={meRps?.wantsNext}
+                                            onClick={!isWaitingForNext ? nextRpsRound : undefined}
                                         >
-                                            {meRps?.wantsNext ? 'Waiting for Opponent...' : 'Next Round'}
+                                            {isWaitingForNext ? 'Waiting for Opponent...' : 'Next Round'}
                                         </button>
                                     )}
                                 </div>
@@ -631,6 +615,7 @@ function App() {
           </div>
       )}
 
+      {/* 🔥 CUSTOM DARK THEMED "OPPONENT LEFT" MODAL */}
       {showTerminatedModal && (
         <div className="modal-overlay" onClick={() => setShowTerminatedModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{textAlign:'center', maxWidth:'400px', background: 'var(--card-bg)', border: '1px solid #ef4444'}}>
@@ -666,7 +651,7 @@ function App() {
                 <div className="brand" style={{ flexShrink: 0 }}>SecureClip</div>
                 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center', minWidth: 0, flexGrow: 1, justifyContent: 'flex-end' }}>
-                    <div className="room-badge" title={`${displayName} #${room}`} style={{ display: 'flex', alignItems: 'center', maxWidth: '140px', padding: '6px 10px', flexShrink: 1, overflow: 'hidden' }}>
+                    <div className="room-badge" title={`${displayName} #${room}`} style={{ display: 'flex', alignItems: 'center', maxWidth: '200px', padding: '6px 10px', flexShrink: 1, overflow: 'hidden' }}>
                         <FaLock className="lock-icon" style={{ flexShrink: 0, marginRight: '6px' }} />
                         <span className="room-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {displayName}
