@@ -11,7 +11,11 @@ function App() {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showSecretModal, setShowSecretModal] = useState(false);
   
+  // 🔥 NEW: Toast Notification State
+  const [showToast, setShowToast] = useState(false);
+
   const [showTerminatedModal, setShowTerminatedModal] = useState(false);
+  // 🔥 FIX 1: Ref to track leaving state accurately
   const isLeavingRef = useRef(false); 
   
   const [myUserId] = useState(() => {
@@ -37,10 +41,10 @@ function App() {
   // --- RPS STATE ---
   const [activeRpsId, setActiveRpsId] = useState(null);
   const [rpsLobbyGames, setRpsLobbyGames] = useState([]);
-  const [rpsGameState, setRpsGameState] = useState({ status: 'waiting', result: null, players: [] });
   const [displayedRpsState, setDisplayedRpsState] = useState({ status: 'waiting', result: null, players: [] });
   const [rpsAnimating, setRpsAnimating] = useState(false);
   const [isWaitingForNext, setIsWaitingForNext] = useState(false);
+  // 🔥 FIX 2: Strict animation lock ref
   const isRpsAnimatingRef = useRef(false); 
 
   const [mode, setMode] = useState('create');
@@ -106,9 +110,11 @@ function App() {
     const syncGames = async () => {
         if (!showGameCenter) return;
         
+        // 🔥 FIX 1: If we are leaving, STOP polling immediately to prevent 404 modal
         if (isLeavingRef.current) return;
 
         try {
+            // --- TTT Polling ---
             if (!activeGameId && !activeRpsId && gameTab === 'ttt') {
                 const res = await api.get(`/games/list?room=${room}`);
                 setLobbyGames(res.data);
@@ -124,27 +130,31 @@ function App() {
                 }
             }
 
+            // --- RPS Polling ---
             if (!activeRpsId && !activeGameId && gameTab === 'rps') {
                 const res = await api.get(`/rps/list?room=${room}`);
                 setRpsLobbyGames(res.data);
             } else if (activeRpsId) {
                 try {
+                    // 🔥 FIX 2: If animating, DO NOT poll server. Lock UI completely.
                     if (isRpsAnimatingRef.current) return;
 
                     const res = await api.get(`/rps/${activeRpsId}?userId=${myUserId}`);
                     const newServerState = res.data;
                     
                     if (newServerState.status === 'revealing' && displayedRpsState.status !== 'revealing') {
+                        // Start Animation Lock
                         isRpsAnimatingRef.current = true; 
                         setRpsAnimating(true);
                         setDisplayedRpsState({ ...newServerState, status: 'animating' }); 
                         
                         setTimeout(() => {
-                            isRpsAnimatingRef.current = false; 
+                            isRpsAnimatingRef.current = false; // Release lock
                             setRpsAnimating(false);
                             setDisplayedRpsState(newServerState);
                         }, 1400); 
                     } else {
+                        // Normal sync when not animating
                         setDisplayedRpsState(newServerState);
                         // 🔥 STABILIZATION FIX: Only unlock "Waiting" if server is truly ready
                         if (newServerState.status === 'ready') {
@@ -239,9 +249,10 @@ function App() {
       await api.post(`/games/${activeGameId}/move`, { index, userId: myUserId });
   };
   const leaveGame = async () => {
-      isLeavingRef.current = true;
+      isLeavingRef.current = true; // 🔥 Block polling immediately
       try { await api.delete(`/games/${activeGameId}/leave`); } catch(e){}
       setActiveGameId(null);
+      // Wait 2s to ensure no stray 404s trigger modal
       setTimeout(() => { isLeavingRef.current = false; }, 2000); 
   };
 
@@ -270,16 +281,19 @@ function App() {
   };
   
   const leaveRpsGame = async () => {
-      isLeavingRef.current = true;
+      isLeavingRef.current = true; // 🔥 Block polling immediately
       try { await api.delete(`/rps/${activeRpsId}/leave`); } catch(e){}
       setActiveRpsId(null); setRpsAnimating(false); isRpsAnimatingRef.current = false; setIsWaitingForNext(false);
+      // Wait 2s to ensure no stray 404s trigger modal
       setTimeout(() => { isLeavingRef.current = false; }, 2000);
   };
 
+  // 🔥 MODIFIED: Click to Copy with Custom Toast
   const copyRoomCode = () => {
       if (room) {
           navigator.clipboard.writeText(room);
-          alert(`Room Code ${room} Copied!`);
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 2000); // Hide after 2 seconds
       }
   };
 
@@ -427,6 +441,11 @@ function App() {
 
   return (
     <div className="container">
+      {/* 🔥 NEW: Custom Toast Notification */}
+      <div className={`toast-notification ${showToast ? 'show' : ''}`}>
+        Room Code Copied!
+      </div>
+
       {isLoading && (
         <div className="loader-overlay">
           <svg className="pencil" viewBox="0 0 200 200" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
@@ -530,7 +549,7 @@ function App() {
                             </div>
                         ) : (
                             <div className="game-board-view" style={{display:'flex', flexDirection:'column', flexGrow:1}}>
-                                <div className="status-bar" style={{marginBottom:'20px', height: '30px', display: 'flex', alignItems:'center', justifyContent: 'center', fontSize:'1.2rem', fontWeight:'bold', color: 'white'}}>
+                                <div className="status-bar" style={{marginBottom:'20px', fontSize:'1.2rem', fontWeight:'bold', color: 'white'}}>
                                     {getStatusText()}
                                 </div>
                                 <div className="tic-tac-grid" style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'10px', background:'rgba(255,255,255,0.05)', padding:'10px', borderRadius:'15px', border:'1px solid var(--border-color)'}}>
@@ -542,7 +561,7 @@ function App() {
                                           }}>{cell}</div>
                                     ))}
                                 </div>
-                                <button className="full-btn" style={{marginTop:'auto', height: '50px', background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveGame}>Leave Match</button>
+                                <button className="full-btn" style={{marginTop:'auto', background:'#3f3f46', color:'white', fontWeight:'bold'}} onClick={leaveGame}>Leave Match</button>
                             </div>
                         )}
                       </>
@@ -597,9 +616,9 @@ function App() {
                                     <span className={`option_image ${meRps?.choice === 'S' ? 'active' : ''}`} onClick={() => makeRpsMove('S')}><img src="https://codingstella.com/wp-content/uploads/2024/01/download-2.png" alt="Scissors" /><p>Scissors</p></span>
                                 </div>
                                 
-                                {/* 🔥 MODIFIED: LARGER RPS BUTTONS (55px height, 1.1rem font) */}
+                                {/* 🔥 MODIFIED: LARGER RPS BUTTONS (62px height, 1.2rem font) */}
                                 <div style={{display:'flex', gap:'10px', marginTop: 'auto'}}>
-                                    <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold', flex: 1, margin: 0, padding: 0, height: '55px', fontSize: '1.1rem'}} onClick={leaveRpsGame}>Leave Match</button>
+                                    <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold', flex: 1, margin: 0, padding: 0, height: '62px', fontSize: '1.2rem'}} onClick={leaveRpsGame}>Leave Match</button>
                                     
                                     {displayedRpsState.status === 'revealing' && !rpsAnimating ? (
                                         <button 
@@ -612,8 +631,8 @@ function App() {
                                                 flex: 1,
                                                 margin: 0,
                                                 padding: '0 5px',
-                                                height: '55px',
-                                                fontSize: '1.1rem'
+                                                height: '62px',
+                                                fontSize: '1.2rem'
                                             }} 
                                             onClick={!isWaitingForNext ? nextRpsRound : undefined}
                                             disabled={isWaitingForNext}
