@@ -1,5 +1,5 @@
 console.log("---------------------------------------------------");
-console.log("⚡ SERVER: FINAL (WITH CLEAR ROOM & SELF DESTRUCT) ⚡");
+console.log("⚡ SERVER: FINAL (CLEANED & STABLE) ⚡");
 console.log("---------------------------------------------------");
 
 require('dotenv').config();
@@ -21,6 +21,7 @@ let activeUsers = {};
 let games = {}; 
 let rpsGames = {}; 
 
+// --- CONFIGURATION ---
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -108,14 +109,24 @@ app.get('/api/proxy-image', (req, res) => {
     }).on('error', (err) => res.status(500).send(err.message));
 });
 
+// 🔥 BUG FIX: Using customFileName from req.body, keeping req.file.originalname intact for Cloudinary
 app.post('/api/clips', upload.single('file'), async (req, res) => {
   try {
-    const { text, room } = req.body;
+    const { text, room, customFileName } = req.body; 
     let fileData = null;
 
     if (req.file) {
+      const mime = req.file.mimetype || '';
+      const originalName = req.file.originalname ? req.file.originalname.toLowerCase() : '';
+
       let uploadResourceType = 'auto';
-      if (req.file.mimetype.startsWith('audio')) uploadResourceType = 'video'; 
+      const isRawFile = !mime.startsWith('image/') && !mime.startsWith('video/') && !mime.startsWith('audio/');
+      
+      if (isRawFile) {
+        uploadResourceType = 'raw';
+      } else if (mime.startsWith('audio/')) {
+        uploadResourceType = 'video'; 
+      }
 
       const uploadResult = await cloudinary.uploader.upload(req.file.path, {
         resource_type: uploadResourceType, 
@@ -127,14 +138,13 @@ app.post('/api/clips', upload.single('file'), async (req, res) => {
       fs.unlinkSync(req.file.path);
 
       let finalType = 'file';
-      if (uploadResult.resource_type === 'image') finalType = 'image';
-      else if (uploadResult.resource_type === 'video') {
-        if (req.file.mimetype.startsWith('audio') || uploadResult.format === 'mp3' || uploadResult.format === 'wav') {
-            finalType = 'audio';
-        } else {
-            finalType = 'video';
-        }
-      }
+      if (mime.startsWith('image/')) finalType = 'image';
+      else if (mime.startsWith('video/')) finalType = 'video';
+      else if (mime.startsWith('audio/')) finalType = 'audio';
+      else if (mime.includes('pdf') || originalName.endsWith('.pdf')) finalType = 'pdf';
+      else if (mime.includes('presentation') || originalName.endsWith('.ppt') || originalName.endsWith('.pptx')) finalType = 'ppt';
+      else if (mime.includes('spreadsheet') || mime.includes('excel') || originalName.endsWith('.xls') || originalName.endsWith('.xlsx')) finalType = 'excel';
+      else if (mime.includes('word') || originalName.endsWith('.doc') || originalName.endsWith('.docx')) finalType = 'doc';
 
       fileData = {
         url: uploadResult.secure_url,
@@ -150,7 +160,7 @@ app.post('/api/clips', upload.single('file'), async (req, res) => {
       text,
       fileUrl: fileData ? fileData.url : null,
       fileType: fileData ? fileData.type : null,
-      fileName: req.file ? req.file.originalname : null,
+      fileName: customFileName || (req.file ? req.file.originalname : null), // Use custom name provided by frontend
       room,
       createdAt: new Date().toISOString()
     };
@@ -162,6 +172,7 @@ app.post('/api/clips', upload.single('file'), async (req, res) => {
 
   } catch (e) {
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("❌ UPLOAD ERROR:", e);
     res.status(500).send(e.message);
   }
 });
@@ -261,7 +272,6 @@ app.post('/api/rps/create', (req, res) => {
     const gameId = 'rps_' + Date.now().toString();
     rpsGames[gameId] = {
         id: gameId, room: room, status: 'waiting', result: null,
-        // 🔥 NEW: wantsNext prevents auto-skip
         players: [{ id: userId, name: userName, choice: null, score: 0, wantsNext: false }]
     };
     res.json({ gameId });
@@ -326,7 +336,6 @@ app.post('/api/rps/:gameId/move', (req, res) => {
     res.json(game);
 });
 
-// 🔥 UPDATED: Wait for BOTH players to click Next Round
 app.post('/api/rps/:gameId/next', (req, res) => {
     const { gameId } = req.params;
     const { userId } = req.body; 
@@ -336,7 +345,6 @@ app.post('/api/rps/:gameId/next', (req, res) => {
     const player = game.players.find(p => p.id === userId);
     if (player) player.wantsNext = true;
 
-    // Check if both want next
     if (game.status === 'revealing' && game.players.length === 2 && game.players.every(p => p.wantsNext)) {
         game.status = 'ready'; 
         game.result = null;
