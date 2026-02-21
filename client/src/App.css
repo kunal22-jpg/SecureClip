@@ -324,13 +324,11 @@ header {
   border-radius: 8px;
 }
 
-/* --- 🔥 NEW AUDIO PLAYER STYLING 🔥 --- */
-/* This makes the audio player look modern, dark, and integrated */
+/* --- 🔥 AUDIO PLAYER STYLING 🔥 --- */
 audio {
   width: 100%;
   height: 36px;
   outline: none;
-  /* Magic Filter: Inverts white player to dark grey/black */
   filter: invert(0.9) hue-rotate(180deg);
   opacity: 0.85;
 }
@@ -340,11 +338,11 @@ audio {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(99, 102, 241, 0.1); /* Halka Purple Tint */
+  background: rgba(99, 102, 241, 0.1); 
   padding: 12px 20px;
   border-radius: 12px;
   font-size: 1rem;
-  color: var(--accent-color); /* Purple Text */
+  color: var(--accent-color); 
   text-decoration: none;
   font-weight: 600;
   transition: all 0.2s ease;
@@ -374,12 +372,12 @@ audio {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7); /* Dark Dim Background */
+  background: rgba(0, 0, 0, 0.7); 
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(5px); /* Mast Blur Effect */
+  backdrop-filter: blur(5px); 
 }
 
 .modal-content {
@@ -493,7 +491,7 @@ input::-webkit-inner-spin-button {
 
 input[type=number] {
   -moz-appearance: textfield;
-  appearance: textfield; /* Fixed the yellow warning here */
+  appearance: textfield; 
 }
 
 /* --- 🚀 3D BOOT LOADER ANIMATION --- */
@@ -503,7 +501,7 @@ input[type=number] {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 16, 20, 0.95); /* Dark background */
+  background: rgba(15, 16, 20, 0.95); 
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -519,7 +517,7 @@ input[type=number] {
   justify-content: center;
   align-items: center;
   background-color: transparent;
-  perspective: 800px; /* Gives the 3D depth */
+  perspective: 800px; 
 }
 
 .cube-wrapper {
@@ -566,10 +564,9 @@ input[type=number] {
 }
 
 /* ----------------------------------------------------- */
-/* 🔥🔥🔥 NEW TIC-TAC-TOE STYLES (GOOGLE DOODLE VIBE) 🔥🔥🔥 */
+/* 🔥🔥🔥 NEW TIC-TAC-TOE STYLES 🔥🔥🔥 */
 /* ----------------------------------------------------- */
 
-/* Game Lobby Scrollbar (Thin & Sleek) */
 .game-lobby div::-webkit-scrollbar {
   width: 6px;
 }
@@ -585,7 +582,6 @@ input[type=number] {
   background: #52525b;
 }
 
-/* Animated Board Cells */
 .tic-tac-grid > div {
   position: relative;
   overflow: hidden;
@@ -597,19 +593,17 @@ input[type=number] {
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Winner Strike-Through Line (Responsive Classes) */
 .strike-line {
   position: absolute;
-  background-color: #facc15; /* Gold Color */
+  background-color: #facc15; 
   border-radius: 5px;
   z-index: 10;
   transform-origin: center;
   animation: drawLine 0.3s ease-out forwards;
   box-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
-  height: 6px; /* Desktop Thickness */
+  height: 6px; 
 }
 
-/* Position Classes */
 .strike-row-1 { top: 16.6%; left: 2%; width: 96%; }
 .strike-row-2 { top: 50%; left: 2%; width: 96%; transform: translateY(-50%); }
 .strike-row-3 { bottom: 16.6%; left: 2%; width: 96%; }
@@ -623,10 +617,9 @@ input[type=number] {
 
 @keyframes drawLine {
   from { width: 0; opacity: 0; }
-  to { width: 96%; opacity: 1; } /* Grows to full width */
+  to { width: 96%; opacity: 1; } 
 }
 
-/* Player Indicator in Lobby */
 .player-dot {
   width: 8px;
   height: 8px;
@@ -640,33 +633,28 @@ input[type=number] {
 /* --- 📱 MOBILE RESPONSIVENESS (UPDATED) --- */
 
 @media screen and (max-width: 768px) {
-  /* 1. Body Padding Kam Karo */
   body { padding: 10px; }
-
-  /* 2. Container Full Width */
   .container { max-width: 100%; }
 
-  /* 3. Lobby Card Adjustments */
   .lobby-card { padding: 25px 20px; }
   .lobby-title { font-size: 2.2rem; }
   .lobby-input { font-size: 1rem; padding: 14px; }
 
-  /* 4. Active Room Header (Fix Wrap Issue) */
   header {
-    flex-wrap: wrap; /* Allow wrapping */
-    justify-content: center; /* Center items when wrapped */
-    gap: 8px; /* Tighter gap */
+    flex-wrap: wrap; 
+    justify-content: center; 
+    gap: 8px; 
   }
   .brand {
     font-size: 1.4rem;
-    width: 100%; /* Force brand to take full top row */
+    width: 100%; 
     text-align: center;
     margin-bottom: 5px;
   }
   .room-badge {
     padding: 6px 10px;
     font-size: 0.8rem;
-    flex-grow: 1; /* Make badges grow to fill space */
+    flex-grow: 1; 
     justify-content: center;
   }
   .room-name {
@@ -677,7 +665,6 @@ input[type=number] {
     text-overflow: ellipsis;
   }
 
-  /* 5. Input Card (Post Area) */
   .input-card { padding: 15px; min-height: 150px; }
   .text-area { font-size: 1rem; }
   .rename-input { width: 100%; font-size: 0.9rem; }
@@ -685,24 +672,20 @@ input[type=number] {
   .attach-btn { font-size: 0.85rem; }
   .post-btn { padding: 10px 18px; font-size: 0.9rem; }
 
-  /* 6. Feed Cards */
   .clip-card { padding: 15px; }
   .clip-meta { flex-direction: column; align-items: flex-start; gap: 10px; }
   .actions { width: 100%; justify-content: flex-end; gap: 12px; }
   .icon-btn { font-size: 1.2rem; padding: 5px; }
 
-  /* 🔥 FIX AUDIO PLAYER ON MOBILE */
   .media-box > div { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; padding: 15px !important; }
   .media-box audio { height: 54px !important; width: 100% !important; margin-top: 5px; }
 
-  /* 7. Modals (Popups) */
   .modal-content { width: 95%; padding: 20px; }
   .preview-image { max-width: 100%; border-radius: 4px; }
   .close-preview { top: 20px; right: 20px; width: 40px; height: 40px; font-size: 1.5rem; }
 
-  /* 🔥🔥🔥 GAME MODAL MOBILE FIXES (FIXES OVERFLOW) 🔥🔥🔥 */
   .modal-content[style*="minWidth:320px"] {
-      min-width: unset !important; /* Override inline styles */
+      min-width: unset !important; 
       width: 90% !important;
   }
 
@@ -714,18 +697,16 @@ input[type=number] {
   }
 
   .tic-tac-grid > div {
-      height: 70px !important; /* Smaller cells */
+      height: 70px !important; 
       font-size: 2.2rem !important;
       border-radius: 6px !important;
   }
 
-  /* 🔥 THINNER STRIKE LINE FOR MOBILE */
   .strike-line {
       height: 4px !important;
       box-shadow: 0 0 5px rgba(250, 204, 21, 0.6);
   }
   
-  /* Adjust vertical lines to be thinner too */
   .strike-col-1, .strike-col-2, .strike-col-3 {
       width: 4px !important;
   }
@@ -744,31 +725,6 @@ input[type=number] {
 .delete-all-btn:hover {
   background: #ef4444;
   transform: translateY(-1px);
-}
-.delete-all-icon-btn {
-  background: #27272a;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.delete-all-icon-btn svg {
-  color: #71717a;
-  font-size: 1rem;
-  transition: color 0.2s ease;
-}
-
-.delete-all-icon-btn:hover {
-  background: #27272a;
-}
-
-.delete-all-icon-btn:hover svg {
-  color: #ef4444;
 }
 .delete-all-icon-btn {
   background: #27272a;
@@ -940,31 +896,18 @@ input[type=number] {
   .option_images { padding: 10px; }
   .option_image p { font-size: 0.8rem; }
 }
+
 /* --- ✏️ CRAZY PENCIL LOADER ANIMATION --- */
-.loader-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 16, 20, 0.95); 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  backdrop-filter: blur(10px);
-}
+/* Note: Removing the duplicate .loader-overlay and .boot-text styles 
+   since you already defined them cleanly at the top of this file. */
 
 .pencil {
   display: block;
   width: 10em;
   height: 10em;
-  /* Make sure the main SVG color stands out against the dark background */
   color: #a855f7; 
 }
 
-/* 🔥 The vital fix: Explicitly link the class names to the keyframes */
 .pencil__body1 {
   animation: pencilBody1 3s linear infinite;
   transform: rotate(-90deg);
@@ -1003,7 +946,6 @@ input[type=number] {
   transform: translate(100px, 100px) rotate(-113deg);
 }
 
-/* Animations (Exactly as provided) */
 @keyframes pencilBody1 {
   from, to { stroke-dashoffset: 351.86; transform: rotate(-90deg); }
   50% { stroke-dashoffset: 150.8; transform: rotate(-225deg); }
@@ -1048,19 +990,6 @@ input[type=number] {
   75%, to { stroke-dashoffset: 439.82; transform: translate(100px, 100px) rotate(112deg); }
 }
 
-.boot-text {
-  margin-top: 40px;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1rem;
-  letter-spacing: 2px;
-  animation: blink 1.5s infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
 /* 🔥 CUSTOM TOAST NOTIFICATION 🔥 */
 .toast-notification {
   position: fixed;
@@ -1084,4 +1013,46 @@ input[type=number] {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
+}
+/* --- 🔥 NEW: CUSTOM ALERT MODAL STYLES 🔥 --- */
+.custom-alert-modal {
+  text-align: center;
+  max-width: 380px;
+}
+
+.custom-alert-modal.error {
+  border: 1px solid #ef4444;
+  box-shadow: 0 10px 40px rgba(239, 68, 68, 0.15);
+}
+
+.custom-alert-modal.info {
+  border: 1px solid #6366f1;
+  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.15);
+}
+
+.custom-alert-icon {
+  font-size: 3.5rem;
+  margin-bottom: 15px;
+  animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popBounce {
+  0% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.custom-alert-title {
+  color: white;
+  margin-bottom: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.custom-alert-message {
+  color: var(--text-secondary);
+  margin-bottom: 25px;
+  line-height: 1.6;
+  font-size: 1.05rem;
 }
