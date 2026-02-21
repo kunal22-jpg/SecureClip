@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { FaCopy, FaCheck, FaTrash, FaPaperclip, FaLock, FaSignOutAlt, FaFileAlt, FaDownload, FaImage, FaTimes, FaMusic, FaEye, FaUsers, FaGamepad } from 'react-icons/fa';
+import { FaCopy, FaCheck, FaTrash, FaPaperclip, FaLock, FaSignOutAlt, FaFileAlt, FaDownload, FaImage, FaTimes, FaMusic, FaEye, FaUsers, FaGamepad } from 'react-icons/fa'; 
 import api from './api';
 import './App.css';
 
@@ -10,12 +10,12 @@ function App() {
   const [clips, setClips] = useState([]);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showSecretModal, setShowSecretModal] = useState(false);
-  
-  // 🔥 NEW: Toast Notification State
   const [showToast, setShowToast] = useState(false);
-
   const [showTerminatedModal, setShowTerminatedModal] = useState(false);
-  // 🔥 FIX 1: Ref to track leaving state accurately
+  
+  // 🔥 NEW: Custom Alert State
+  const [customAlert, setCustomAlert] = useState({ show: false, message: '', type: 'error' });
+
   const isLeavingRef = useRef(false); 
   
   const [myUserId] = useState(() => {
@@ -29,22 +29,18 @@ function App() {
 
   const [memberCount, setMemberCount] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-
   const [showGameCenter, setShowGameCenter] = useState(false);
   const [gameTab, setGameTab] = useState('ttt'); 
 
-  // --- TIC TAC TOE STATE ---
   const [activeGameId, setActiveGameId] = useState(null);
   const [lobbyGames, setLobbyGames] = useState([]);
   const [gameState, setGameState] = useState({ board: Array(9).fill(null), turn: 'X', winner: null, winningLine: null, isDraw: false, players: [], status: 'waiting' });
 
-  // --- RPS STATE ---
   const [activeRpsId, setActiveRpsId] = useState(null);
   const [rpsLobbyGames, setRpsLobbyGames] = useState([]);
   const [displayedRpsState, setDisplayedRpsState] = useState({ status: 'waiting', result: null, players: [] });
   const [rpsAnimating, setRpsAnimating] = useState(false);
   const [isWaitingForNext, setIsWaitingForNext] = useState(false);
-  // 🔥 FIX 2: Strict animation lock ref
   const isRpsAnimatingRef = useRef(false); 
 
   const [mode, setMode] = useState('create');
@@ -69,12 +65,31 @@ function App() {
   const SECRET_MESSAGE = "🎉 Congratulations!Chutiye ho tum";
   const SECRET_VIDEO_URL = "https://youtu.be/BRa2-Qnztk0?si=QFd6VK0YKUyv6o_P";
 
+  // 🔥 Helper function to trigger custom alerts
+  const showAlert = (message, type = 'error') => {
+      setCustomAlert({ show: true, message, type });
+  };
+  const closeAlert = () => {
+      setCustomAlert({ show: false, message: '', type: 'error' });
+  };
+
   const { getRootProps, getInputProps, open } = useDropzone({
+    maxSize: 10 * 1024 * 1024, 
     onDrop: files => {
       const droppedFile = files[0];
-      setFile(droppedFile);
-      setCustomFileName(droppedFile.name); 
-      setTimeout(() => { renameInputRef.current?.focus(); renameInputRef.current?.select(); }, 50);
+      if (droppedFile) {
+          setFile(droppedFile);
+          setCustomFileName(droppedFile.name); 
+          setTimeout(() => { renameInputRef.current?.focus(); renameInputRef.current?.select(); }, 50);
+      }
+    },
+    onDropRejected: (fileRejections) => {
+      const rejectedFile = fileRejections[0];
+      if (rejectedFile.errors[0].code === 'file-too-large') {
+        showAlert(`Whoops! "${rejectedFile.file.name}" is too large. Maximum file size is 10MB.`, 'error');
+      } else {
+        showAlert("File upload rejected. Please try a different file.", 'error');
+      }
     },
     multiple: false,
     noClick: true 
@@ -83,6 +98,11 @@ function App() {
   const handlePaste = (e) => {
     if (e.clipboardData.files.length > 0) {
         const pastedFile = e.clipboardData.files[0];
+        if (pastedFile.size > 10 * 1024 * 1024) {
+            e.preventDefault();
+            showAlert("Whoops! The pasted file is too large. Maximum file size is 10MB.", 'error');
+            return;
+        }
         if (pastedFile.type.startsWith('image')) {
             e.preventDefault();
             setFile(pastedFile);
@@ -109,12 +129,9 @@ function App() {
 
     const syncGames = async () => {
         if (!showGameCenter) return;
-        
-        // 🔥 FIX 1: If we are leaving, STOP polling immediately to prevent 404 modal
         if (isLeavingRef.current) return;
 
         try {
-            // --- TTT Polling ---
             if (!activeGameId && !activeRpsId && gameTab === 'ttt') {
                 const res = await api.get(`/games/list?room=${room}`);
                 setLobbyGames(res.data);
@@ -130,44 +147,31 @@ function App() {
                 }
             }
 
-            // --- RPS Polling ---
             if (!activeRpsId && !activeGameId && gameTab === 'rps') {
                 const res = await api.get(`/rps/list?room=${room}`);
                 setRpsLobbyGames(res.data);
             } else if (activeRpsId) {
                 try {
-                    // 🔥 FIX 2: If animating, DO NOT poll server. Lock UI completely.
                     if (isRpsAnimatingRef.current) return;
-
                     const res = await api.get(`/rps/${activeRpsId}?userId=${myUserId}`);
                     const newServerState = res.data;
                     
                     if (newServerState.status === 'revealing' && displayedRpsState.status !== 'revealing') {
-                        // Start Animation Lock
                         isRpsAnimatingRef.current = true; 
                         setRpsAnimating(true);
                         setDisplayedRpsState({ ...newServerState, status: 'animating' }); 
-                        
                         setTimeout(() => {
-                            isRpsAnimatingRef.current = false; // Release lock
+                            isRpsAnimatingRef.current = false; 
                             setRpsAnimating(false);
                             setDisplayedRpsState(newServerState);
                         }, 1400); 
                     } else {
-                        // Normal sync when not animating
                         setDisplayedRpsState(newServerState);
-                        // 🔥 STABILIZATION FIX: Only unlock "Waiting" if server is truly ready
-                        if (newServerState.status === 'ready') {
-                             setIsWaitingForNext(false);
-                        }
+                        if (newServerState.status === 'ready') setIsWaitingForNext(false);
                     }
                 } catch (e) {
                     if (e.response && e.response.status === 404 && !isLeavingRef.current) {
-                        setActiveRpsId(null);
-                        setRpsAnimating(false);
-                        isRpsAnimatingRef.current = false;
-                        setIsWaitingForNext(false);
-                        setShowTerminatedModal(true);
+                        setActiveRpsId(null); setRpsAnimating(false); isRpsAnimatingRef.current = false; setIsWaitingForNext(false); setShowTerminatedModal(true);
                     }
                 }
             }
@@ -175,27 +179,14 @@ function App() {
     };
 
     if (showGameCenter) syncGames();
-
-    const interval = setInterval(() => {
-        fetchClips();
-        if (showGameCenter) syncGames();
-    }, 1000); 
+    const interval = setInterval(() => { fetchClips(); if (showGameCenter) syncGames(); }, 1000); 
 
     window.addEventListener('keydown', handleGlobalKeys);
-
-    const handleUnload = () => {
-        const baseUrl = api.defaults.baseURL || ''; 
-        const leaveUrl = `${baseUrl}/leave?room=${room}&userId=${myUserId}`;
-        navigator.sendBeacon(leaveUrl);
-    };
+    const handleUnload = () => { navigator.sendBeacon(`${api.defaults.baseURL || ''}/leave?room=${room}&userId=${myUserId}`); };
     window.addEventListener('beforeunload', handleUnload);
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('keydown', handleGlobalKeys);
-      window.removeEventListener('beforeunload', handleUnload);
-    };
-  }, [room, clips, file, text, showModal, previewImage, showGameCenter, gameTab, activeGameId, activeRpsId, displayedRpsState.status, rpsAnimating]); 
+    return () => { clearInterval(interval); window.removeEventListener('keydown', handleGlobalKeys); window.removeEventListener('beforeunload', handleUnload); };
+  }, [room, showGameCenter, gameTab, activeGameId, activeRpsId, displayedRpsState.status, rpsAnimating]); 
 
   const handleCloseGameCenter = () => {
       if (activeGameId) leaveGame();
@@ -206,6 +197,7 @@ function App() {
   const handleGlobalKeys = (e) => {
     if (e.key === 'Escape') {
         e.preventDefault();
+        if (customAlert.show) { closeAlert(); return; }
         if (showSecretModal) { setShowSecretModal(false); return; }
         if (showClearModal) { setShowClearModal(false); return; }
         if (showTerminatedModal) { setShowTerminatedModal(false); return; }
@@ -222,17 +214,13 @@ function App() {
         else {
             const latestFileClip = clips.find(c => c.fileUrl);
             if (latestFileClip) openDownloadModal(latestFileClip.fileUrl, latestFileClip.fileName); 
-            else alert("No file to download!"); 
+            else showAlert("No file to download!", "info"); 
         }
     }
   };
 
-  const createGame = async () => {
-      try { const res = await api.post('/games/create', { room, userId: myUserId, userName: displayName }); setActiveGameId(res.data.gameId); } catch (err) { alert("Could not create game"); }
-  };
-  const joinGame = async (gameId) => {
-      try { await api.post('/games/join', { gameId, userId: myUserId, userName: displayName }); setActiveGameId(gameId); } catch (err) { alert(err.response?.data?.error || "Game full or unavailable"); }
-  };
+  const createGame = async () => { try { const res = await api.post('/games/create', { room, userId: myUserId, userName: displayName }); setActiveGameId(res.data.gameId); } catch (err) { showAlert("Could not create game", "error"); } };
+  const joinGame = async (gameId) => { try { await api.post('/games/join', { gameId, userId: myUserId, userName: displayName }); setActiveGameId(gameId); } catch (err) { showAlert(err.response?.data?.error || "Game full or unavailable", "error"); } };
   const makeMove = async (index) => {
       if (gameState.board[index] || gameState.winner || gameState.isDraw) return;
       const me = gameState.players.find(p => p.id === myUserId);
@@ -248,22 +236,10 @@ function App() {
       setGameState(prev => ({ ...prev, board: newBoard, winner: localWinner || prev.winner, winningLine: localLine || prev.winningLine }));
       await api.post(`/games/${activeGameId}/move`, { index, userId: myUserId });
   };
-  const leaveGame = async () => {
-      isLeavingRef.current = true; // 🔥 Block polling immediately
-      try { await api.delete(`/games/${activeGameId}/leave`); } catch(e){}
-      setActiveGameId(null);
-      // Wait 2s to ensure no stray 404s trigger modal
-      setTimeout(() => { isLeavingRef.current = false; }, 2000); 
-  };
+  const leaveGame = async () => { isLeavingRef.current = true; try { await api.delete(`/games/${activeGameId}/leave`); } catch(e){} setActiveGameId(null); setTimeout(() => { isLeavingRef.current = false; }, 2000); };
 
-  const createRpsGame = async () => {
-      setIsWaitingForNext(false); setRpsAnimating(false); isRpsAnimatingRef.current = false;
-      try { const res = await api.post('/rps/create', { room, userId: myUserId, userName: displayName }); setActiveRpsId(res.data.gameId); } catch (err) {}
-  };
-  const joinRpsGame = async (gameId) => {
-      setIsWaitingForNext(false); setRpsAnimating(false); isRpsAnimatingRef.current = false;
-      try { await api.post('/rps/join', { gameId, userId: myUserId, userName: displayName }); setActiveRpsId(gameId); } catch (err) {}
-  };
+  const createRpsGame = async () => { setIsWaitingForNext(false); setRpsAnimating(false); isRpsAnimatingRef.current = false; try { const res = await api.post('/rps/create', { room, userId: myUserId, userName: displayName }); setActiveRpsId(res.data.gameId); } catch (err) {} };
+  const joinRpsGame = async (gameId) => { setIsWaitingForNext(false); setRpsAnimating(false); isRpsAnimatingRef.current = false; try { await api.post('/rps/join', { gameId, userId: myUserId, userName: displayName }); setActiveRpsId(gameId); } catch (err) {} };
   
   const makeRpsMove = async (choice) => {
       if (displayedRpsState.status === 'finished' || displayedRpsState.status === 'revealing' || displayedRpsState.status === 'animating' || rpsAnimating) return;
@@ -275,76 +251,38 @@ function App() {
       await api.post(`/rps/${activeRpsId}/move`, { choice, userId: myUserId });
   };
   
-  const nextRpsRound = async () => {
-      setIsWaitingForNext(true); 
-      await api.post(`/rps/${activeRpsId}/next`, { userId: myUserId });
-  };
-  
-  const leaveRpsGame = async () => {
-      isLeavingRef.current = true; // 🔥 Block polling immediately
-      try { await api.delete(`/rps/${activeRpsId}/leave`); } catch(e){}
-      setActiveRpsId(null); setRpsAnimating(false); isRpsAnimatingRef.current = false; setIsWaitingForNext(false);
-      // Wait 2s to ensure no stray 404s trigger modal
-      setTimeout(() => { isLeavingRef.current = false; }, 2000);
-  };
+  const nextRpsRound = async () => { setIsWaitingForNext(true); await api.post(`/rps/${activeRpsId}/next`, { userId: myUserId }); };
+  const leaveRpsGame = async () => { isLeavingRef.current = true; try { await api.delete(`/rps/${activeRpsId}/leave`); } catch(e){} setActiveRpsId(null); setRpsAnimating(false); isRpsAnimatingRef.current = false; setIsWaitingForNext(false); setTimeout(() => { isLeavingRef.current = false; }, 2000); };
 
-  // 🔥 MODIFIED: Click to Copy with Custom Toast
-  const copyRoomCode = () => {
-      if (room) {
-          navigator.clipboard.writeText(room);
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 2000); // Hide after 2 seconds
-      }
-  };
+  const copyRoomCode = () => { if (room) { navigator.clipboard.writeText(room); setShowToast(true); setTimeout(() => setShowToast(false), 2000); } };
 
   const handleCreate = async () => {
-    if (!inputName.trim()) return alert("Enter a room name!");
+    if (!inputName.trim()) return showAlert("Please enter a room name!", "info");
     setIsLoading(true);
     try {
         const code = Math.floor(10000 + Math.random() * 90000).toString();
-        await Promise.all([
-            api.post('/room-check', { room: code, name: inputName }),
-            new Promise(resolve => setTimeout(resolve, 2500))
-        ]);
+        await Promise.all([api.post('/room-check', { room: code, name: inputName }), new Promise(resolve => setTimeout(resolve, 2500))]);
         sessionStorage.setItem('secureclip_room', code); sessionStorage.setItem('secureclip_name', inputName);
         setRoom(code); setDisplayName(inputName);
-    } catch (error) { alert("Connecting to server..."); } finally { setIsLoading(false); }
+    } catch (error) { showAlert("Connecting to server failed...", "error"); } finally { setIsLoading(false); }
   };
 
   const handleJoin = async () => {
-    if (inputCode.length !== 5) return alert("Enter valid 5-digit code!");
+    if (inputCode.length !== 5) return showAlert("Please enter a valid 5-digit code!", "info");
     setIsLoading(true);
     try {
-      const [res] = await Promise.all([
-          api.post('/room-check', { room: inputCode }),
-          new Promise(resolve => setTimeout(resolve, 2500))
-      ]);
-      if (!res.data.name) { alert("❌ Room Not Found!"); return; }
+      const [res] = await Promise.all([api.post('/room-check', { room: inputCode }), new Promise(resolve => setTimeout(resolve, 2500))]);
+      if (!res.data.name) { showAlert("Room Not Found! Please check the code.", "error"); return; }
       sessionStorage.setItem('secureclip_room', inputCode); sessionStorage.setItem('secureclip_name', res.data.name);
       setDisplayName(res.data.name); setRoom(inputCode);
-    } catch (err) { alert("Connection Error."); } finally { setIsLoading(false); }
+    } catch (err) { showAlert("Connection Error. Is the server running?", "error"); } finally { setIsLoading(false); }
   };
 
-  const handleLogout = () => {
-      api.post(`/leave?room=${room}&userId=${myUserId}`);
-      sessionStorage.removeItem('secureclip_room'); sessionStorage.removeItem('secureclip_name');
-      setRoom(null); setDisplayName(''); setClips([]); setShowGameCenter(false);
-  };
-
-  const handleClearRoom = async () => {
-      try {
-          await api.delete(`/room/clear?room=${room}`);
-          setClips([]); setActiveGameId(null); setActiveRpsId(null); setShowClearModal(false);
-      } catch (err) { alert("Failed to clear room."); }
-  };
+  const handleLogout = () => { api.post(`/leave?room=${room}&userId=${myUserId}`); sessionStorage.removeItem('secureclip_room'); sessionStorage.removeItem('secureclip_name'); setRoom(null); setDisplayName(''); setClips([]); setShowGameCenter(false); };
+  const handleClearRoom = async () => { try { await api.delete(`/room/clear?room=${room}`); setClips([]); setActiveGameId(null); setActiveRpsId(null); setShowClearModal(false); } catch (err) { showAlert("Failed to clear room.", "error"); } };
 
   const handleLobbyKeyDown = (e) => { if (e.key === 'Enter') { mode === 'create' ? handleCreate() : handleJoin(); } };
-  const fetchClips = async () => {
-    try {
-      const res = await api.get(`/clips?room=${room}&userId=${myUserId}`);
-      if (res.data.clips) { setClips(res.data.clips); setMemberCount(res.data.members || 1); } else { setClips(res.data); }
-    } catch (err) { console.error("Error"); }
-  };
+  const fetchClips = async () => { try { const res = await api.get(`/clips?room=${room}&userId=${myUserId}`); if (res.data.clips) { setClips(res.data.clips); setMemberCount(res.data.members || 1); } else { setClips(res.data); } } catch (err) { console.error("Error fetching clips"); } };
   const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } };
   const handleRemoveFile = () => { if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; } setFile(null); setCustomFileName(''); setUploading(false); };
 
@@ -352,18 +290,28 @@ function App() {
     if (!text && !file) return;
     setUploading(true);
     const controller = new AbortController(); abortControllerRef.current = controller;
-    const formData = new FormData(); formData.append('text', text); formData.append('room', room);
-    if (file) formData.append('file', file, customFileName || file.name); 
+    const formData = new FormData(); 
+    
+    formData.append('text', text); 
+    formData.append('room', room);
+    
+    if (file) {
+        formData.append('file', file);
+        formData.append('customFileName', customFileName || file.name); 
+    }
+    
     try {
       await api.post('/clips', formData, { headers: { 'Content-Type': 'multipart/form-data' }, signal: controller.signal });
       if (controller.signal.aborted) return;
       setText(''); setFile(null); setCustomFileName(''); fetchClips(); setTimeout(() => { inputRef.current?.focus(); }, 10);
-    } catch (err) { if (err.name !== 'CanceledError') alert("Error posting"); } 
+    } catch (err) { 
+      if (err.name !== 'CanceledError') showAlert("Error posting file. It may have been rejected by the server.", "error"); 
+    } 
     finally { if (abortControllerRef.current === controller) { setUploading(false); abortControllerRef.current = null; } }
   };
 
   const handleDelete = async (id) => { await api.delete(`/clips/${id}`); fetchClips(); };
-  const handleCopy = async (txt, id) => { try { await navigator.clipboard.writeText(txt); showCheckmark(id); } catch (err) { alert("Copy failed"); } };
+  const handleCopy = async (txt, id) => { try { await navigator.clipboard.writeText(txt); showCheckmark(id); } catch (err) { showAlert("Copy failed. Try selecting the text manually.", "error"); } };
   const handleCopyImage = async (imgUrl, id) => {
     try {
         const response = await fetch(imgUrl, { mode: 'cors', credentials: 'omit' });
@@ -377,20 +325,23 @@ function App() {
             const res = await api.get(proxyUrl, { responseType: 'blob' });
             await navigator.clipboard.write([ new ClipboardItem({ [res.data.type]: res.data }) ]);
             showCheckmark(id);
-        } catch (finalErr) { alert("Failed to copy. Browser blocked it."); }
+        } catch (finalErr) { showAlert("Failed to copy image. Your browser might be blocking it.", "error"); }
     }
   };
   const showCheckmark = (id) => { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
+  
   const performDownload = async (fileUrl, fileName) => {
     try {
       const response = await fetch(fileUrl); const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob); const link = document.createElement('a'); link.href = blobUrl;
-      const extension = fileName.includes('.') ? fileName.split('.').pop() : ''; let finalName = fileName;
-      if (extension && !finalName.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) finalName = `${finalName}.${extension}`;
+      const urlExtension = fileUrl.split('.').pop().split('?')[0]; 
+      let finalName = fileName || 'download';
+      if (!finalName.includes('.')) { finalName = `${finalName}.${urlExtension}`; }
       link.download = finalName; document.body.appendChild(link); link.click(); document.body.removeChild(link); window.URL.revokeObjectURL(blobUrl);
       setShowModal(false); 
     } catch (err) { window.open(fileUrl, '_blank'); setShowModal(false); }
   };
+
   const openDownloadModal = (url, name) => { setModalFile({ url, name: name || 'file' }); setModalInputName(name || 'file'); setShowModal(true); setTimeout(() => modalInputRef.current?.select(), 50); };
   const formatTextWithLinks = (text) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -420,9 +371,7 @@ function App() {
 
   let rpsResultText = "Wait...";
   if (displayedRpsState.status === 'waiting') rpsResultText = "Waiting...";
-  else if (displayedRpsState.status === 'ready' || displayedRpsState.status === 'animating') {
-      rpsResultText = meRps?.choice ? "Waiting..." : "Make your choice!";
-  }
+  else if (displayedRpsState.status === 'ready' || displayedRpsState.status === 'animating') { rpsResultText = meRps?.choice ? "Waiting..." : "Make your choice!"; }
   else if (displayedRpsState.status === 'revealing') {
       if (rpsAnimating) rpsResultText = "Wait...";
       else {
@@ -441,10 +390,7 @@ function App() {
 
   return (
     <div className="container">
-      {/* 🔥 NEW: Custom Toast Notification */}
-      <div className={`toast-notification ${showToast ? 'show' : ''}`}>
-        Room Code Copied!
-      </div>
+      <div className={`toast-notification ${showToast ? 'show' : ''}`}>Room Code Copied!</div>
 
       {isLoading && (
         <div className="loader-overlay">
@@ -476,6 +422,22 @@ function App() {
               </g>
           </svg>
           <div className="boot-text" style={{color: '#a855f7'}}>ESTABLISHING UPLINK...</div>
+        </div>
+      )}
+
+      {/* 🔥 NEW: CUSTOM ALERT MODAL */}
+      {customAlert.show && (
+        <div className="modal-overlay" onClick={closeAlert}>
+          <div className={`modal-content custom-alert-modal ${customAlert.type}`} onClick={(e) => e.stopPropagation()}>
+            <div className="custom-alert-icon">
+              {customAlert.type === 'error' ? '⚠️' : 'ℹ️'}
+            </div>
+            <h3 className="custom-alert-title">
+              {customAlert.type === 'error' ? 'Action Failed' : 'Notice'}
+            </h3>
+            <p className="custom-alert-message">{customAlert.message}</p>
+            <button className="full-btn" onClick={closeAlert} style={{background: customAlert.type === 'error' ? '#ef4444' : '#6366f1'}}>Okay</button>
+          </div>
         </div>
       )}
 
@@ -616,7 +578,6 @@ function App() {
                                     <span className={`option_image ${meRps?.choice === 'S' ? 'active' : ''}`} onClick={() => makeRpsMove('S')}><img src="https://codingstella.com/wp-content/uploads/2024/01/download-2.png" alt="Scissors" /><p>Scissors</p></span>
                                 </div>
                                 
-                                {/* 🔥 MODIFIED: LARGER RPS BUTTONS (62px height, 1.2rem font) */}
                                 <div style={{display:'flex', gap:'10px', marginTop: 'auto'}}>
                                     <button className="full-btn" style={{background:'#3f3f46', color:'white', fontWeight:'bold', flex: 1, margin: 0, padding: 0, height: '62px', fontSize: '1.2rem'}} onClick={leaveRpsGame}>Leave Match</button>
                                     
@@ -684,32 +645,19 @@ function App() {
         <div className="container">
             <header>
                 <div className="brand" style={{ flexShrink: 0 }}>SecureClip</div>
-                
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'nowrap', alignItems: 'center', minWidth: 0, flexGrow: 1, justifyContent: 'flex-end' }}>
-                    
-                    {/* 🔥 MODIFIED: CLICK TO COPY HANDLER ADDED */}
-                    <div 
-                        className="room-badge" 
-                        title="Click to Copy Room Code" 
-                        onClick={copyRoomCode} 
-                        style={{ display: 'flex', alignItems: 'center', maxWidth: '140px', padding: '6px 10px', flexShrink: 1, overflow: 'hidden', cursor: 'pointer' }}
-                    >
+                    <div className="room-badge" title="Click to Copy Room Code" onClick={copyRoomCode} style={{ display: 'flex', alignItems: 'center', maxWidth: '140px', padding: '6px 10px', flexShrink: 1, overflow: 'hidden', cursor: 'pointer' }}>
                         <FaLock className="lock-icon" style={{ flexShrink: 0, marginRight: '6px' }} />
-                        <span className="room-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {displayName}
-                        </span>
+                        <span className="room-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
                         <span style={{ opacity: 0.5, marginLeft: '4px', flexShrink: 0, color: 'white', fontSize: '0.9rem' }}>#{room}</span>
                     </div>
-                    
                     <div className="room-badge" title="Game Center (Alt+G)" onClick={() => setShowGameCenter(true)} style={{cursor: 'pointer', padding: '6px 10px', flexShrink: 0}}>
                         <FaGamepad style={{color: '#a855f7', fontSize: '1.2rem'}} />
                     </div>
-                    
                     <div className="room-badge" title="Online Members" style={{ padding: '6px 10px', flexShrink: 0 }}>
                         <FaUsers className="lock-icon" style={{color: '#4ade80', marginRight: '6px'}} />
                         <span className="room-name">{memberCount}</span>
                     </div>
-
                     <FaSignOutAlt className="exit-icon" onClick={handleLogout} title="Exit Room" style={{ flexShrink: 0, marginLeft: '4px' }} />
                 </div>
             </header>
@@ -726,7 +674,8 @@ function App() {
                 )}
                 <div className="toolbar">
                 <div className="attach-btn" onClick={(e) => { e.stopPropagation(); open(); }}><FaPaperclip /> {file ? 'Change File' : 'Attach File'}</div>
-                <div style={{display:'flex', gap:'10px', alignItems:'center'}}>
+                
+                <div style={{display:'flex', gap:'10px', alignItems:'center', marginLeft: 'auto'}}>
                   <button className="delete-all-icon-btn" onClick={() => setShowClearModal(true)} title="Delete all clips in this room"><FaTrash /></button>
                   <button className="post-btn" onClick={handleSubmit} disabled={uploading}>{uploading ? 'Posting...' : 'Post Clip'}</button>
                 </div>
@@ -741,7 +690,7 @@ function App() {
                     <div className="actions">
                         {clip.text && !clip.fileType && (<button className="icon-btn" onClick={() => handleCopy(clip.text, clip._id)}>{copiedId === clip._id ? <FaCheck style={{color:'#4ade80'}} /> : <FaCopy />}</button>)}
                         {clip.fileType === 'image' && (<><button className="icon-btn" title="Copy Image" onClick={() => handleCopyImage(clip.fileUrl, clip._id)}>{copiedId === clip._id ? <FaCheck style={{color:'#4ade80'}} /> : <FaImage />}</button><button className="icon-btn" title="View" onClick={() => setPreviewImage(clip.fileUrl)}><FaEye /></button><button className="icon-btn" title="Download" onClick={() => openDownloadModal(clip.fileUrl, clip.fileName)}><FaDownload /></button></>)}
-                        {(clip.fileType === 'video' || clip.fileType === 'audio' || clip.fileType === 'file') && (<button className="icon-btn" title="Download" onClick={() => openDownloadModal(clip.fileUrl, clip.fileName)}><FaDownload /></button>)}
+                        {['video', 'audio', 'file', 'pdf', 'ppt', 'excel', 'doc'].includes(clip.fileType) && (<button className="icon-btn" title="Download" onClick={() => openDownloadModal(clip.fileUrl, clip.fileName)}><FaDownload /></button>)}
                         <button className="icon-btn delete-btn" onClick={() => handleDelete(clip._id)}><FaTrash /></button>
                     </div>
                     </div>
@@ -751,7 +700,7 @@ function App() {
                         {clip.fileType === 'audio' && (<div style={{width:'100%', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '10px', display:'flex', alignItems:'center', gap:'12px', border: '1px solid var(--border-color)'}}><div style={{width:'40px', height:'40px', background:'rgba(99, 102, 241, 0.2)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink: 0}}><FaMusic style={{color:'#6366f1', fontSize: '1.2rem'}} /></div><audio controls src={clip.fileUrl} style={{width:'100%', height:'36px', outline:'none'}} /></div>)}
                         {clip.fileType === 'video' && <video controls src={clip.fileUrl} />}
                         {clip.fileType === 'image' && (<div style={{position:'relative', cursor:'zoom-in'}} onClick={() => setPreviewImage(clip.fileUrl)}><img src={clip.fileUrl} alt="Clip" /></div>)}
-                        {clip.fileType === 'file' && (<a href="#" onClick={(e) => { e.preventDefault(); openDownloadModal(clip.fileUrl, clip.fileName); }} className="file-pill"><FaFileAlt /> {clip.fileName || "Download File"} </a>)}
+                        {['file', 'pdf', 'ppt', 'excel', 'doc'].includes(clip.fileType) && (<a href="#" onClick={(e) => { e.preventDefault(); openDownloadModal(clip.fileUrl, clip.fileName); }} className="file-pill"><FaFileAlt /> {clip.fileName || "Download File"} </a>)}
                     </div>
                     )}
                 </div>
