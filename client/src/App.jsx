@@ -63,7 +63,7 @@ function App() {
 
   const SECRET_CODE = "Fhak me"; 
   const SECRET_MESSAGE = "🎉 Congratulations!Chutiye ho tum";
-  const SECRET_VIDEO_URL = "https://youtu.be/BRa2-Qnztk0?si=QFd6VK0YKUyv6o_P";
+  const SECRET_VIDEO_URL = "https://youtube.com/shorts/N4BAXVJwbms?si=M_fDm4ChYPy1c6BT";
 
   // 🔥 Helper function to trigger custom alerts
   const showAlert = (message, type = 'error') => {
